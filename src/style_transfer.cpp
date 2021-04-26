@@ -46,7 +46,8 @@ preprocess_slic(
     std::string algorithm_string,
     int region_size,
     float ruler,
-    int connectivity
+    int connectivity,
+    int num_superpixels = 0
 ) {
     cv::Mat input_image = open_image( input_image_filename );
 
@@ -95,7 +96,7 @@ preprocess_slic(
     image_data.region_size = region_size;
     image_data.ruler = ruler;
     image_data.connectivity = connectivity;
-    image_data.num_superpixels = 0;
+    image_data.num_superpixels = num_superpixels;
 
     return image_data;
 }
@@ -205,6 +206,19 @@ main(int argc, const char** argv)
 
     // apply segmentation
     process_slic( &source_data );
+
+
+    // open the image with given options
+    SLICData target_data = preprocess_slic(
+        target_image_filename,
+        scale_image_value,
+        pad_input,
+        algorithm_string,
+        region_size,
+        ruler,
+        connectivity,
+        source_data.num_superpixels
+    );
 
     // post-process slic data
     postprocess_slic(

@@ -35,5 +35,4 @@ cv::Mat paint_map_atop_region(SLICData* map_data, int marker_value, cv::Mat draw
 
 void draw_on_original(SLICData* map_data, int marker_value = -1);
 
-
 #endif
