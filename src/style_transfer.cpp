@@ -36,8 +36,15 @@ wait_key()
 }
 
 
+void
+transfer_style(SLICData* src, SLICData* dst)
+{
+
+}
+
+
 std::vector<SLICData>
-transfer_style(
+initialize_superimposed_images(
     std::string template_image_filename,
     std::string target_image_filename,
     float scale_image_value,
@@ -80,13 +87,6 @@ transfer_style(
     // apply segmentation to target with same number of superpixels
     process_slic( &target_data );
 
-    // post-process slic data
-    postprocess_slic(
-        &target_data,
-        blur_output,
-        equalize_output,
-        sharpen_output
-    );
 
     std::vector<SLICData> data;
     data.push_back( source_data );
@@ -129,7 +129,7 @@ main(int argc, const char** argv)
     );
     if (parse_result != 1) return parse_result;
 
-    std::vector<SLICData> style_data = transfer_style(
+    std::vector<SLICData> style_data = initialize_superimposed_images(
         template_image_filename,
         target_image_filename,
         scale_image_value,
@@ -138,6 +138,16 @@ main(int argc, const char** argv)
         region_size,
         ruler,
         connectivity,
+        blur_output,
+        equalize_output,
+        sharpen_output
+    );
+
+    transfer_style( &style_data[0], &style_data[1] );
+
+    // post-process target slic data
+    postprocess_slic(
+        &style_data[1],
         blur_output,
         equalize_output,
         sharpen_output
