@@ -25,6 +25,26 @@ typedef struct {
 } SLICData;
 
 
+SLICData preprocess_slic(
+    std::string input_image_filename,
+    float scale_image_value,
+    bool pad_input,
+    std::string algorithm_string,
+    int region_size,
+    float ruler,
+    int connectivity,
+    int num_superpixels = 0
+);
+
+void process_slic(SLICData* image_data);
+
+void postprocess_slic(
+    SLICData* image_data,
+    bool blur_output,
+    bool equalize_output,
+    bool sharpen_output
+);
+
 void superpixel(SLICData* image_data);
 
 int slic_string_to_int(std::string algorithm_string);

@@ -14,6 +14,8 @@
 #include "../include/affine.hpp"
 #include "../include/bitwise_porter_duff_ops.hpp"
 #include "../include/canny.hpp"
+#include "../include/equalize.hpp"
+#include "../include/mouse_callback.hpp"
 #include "../include/rectangle.hpp"
 #include "../include/region_of_interest.hpp"
 #include "../include/segmentation.hpp"
@@ -28,7 +30,140 @@
     #include "../include/string_helper.hpp"
 #endif
 
+const std::string WINDOW_NAME = "SLIC Superpixels";
 
+
+// initialize input data
+SLICData
+preprocess_slic(
+    std::string input_image_filename,
+    float scale_image_value,
+    bool pad_input,
+    std::string algorithm_string,
+    int region_size,
+    float ruler,
+    int connectivity,
+    int num_superpixels
+) {
+    cv::Mat input_image = open_image( input_image_filename );
+
+    // scale the input size if given 's' flag
+    if (scale_image_value != 1.f) {
+        input_image = resize_affine( input_image, scale_image_value );
+    }
+
+    // crop if odd resolution
+    input_image = input_image(
+        cv::Rect( 0, 0, input_image.cols & -2, input_image.rows & -2 )
+    );
+    std::cout << "Scaled Image size is:\t\t" << input_image.cols << "x" << input_image.rows << std::endl;
+
+    // pad the input image if given flag
+    if (pad_input) {
+        cv::copyMakeBorder( input_image, input_image, 50, 50, 50, 50, cv::BORDER_CONSTANT, cv::Scalar(0) );
+        std::cout << "Padded Image size is:\t\t" << input_image.cols << "x" << input_image.rows << std::endl;
+    }
+
+    // blur
+    cv::GaussianBlur( input_image, input_image, cv::Size( 3, 3 ), 0.5f );
+
+    // convert to CieLAB
+    cv::cvtColor( input_image, input_image, cv::COLOR_BGR2Lab );
+
+#if DEBUG > 1
+    cv::imshow( WINDOW_NAME, input_image );
+    // 'event loop' for keypresses
+    while (wait_key());
+#endif
+
+    std::string output_window_name = WINDOW_NAME + " Output Image";
+
+    // initialize SLICData object
+    SLICData image_data;
+    image_data.window_name = output_window_name;
+    input_image.copyTo( image_data.input_image );
+
+    // create mask, only distance filter on foreground
+    //TODO make this better at background detection, not just black backgrounds
+    image_data.input_mask = make_background_mask( image_data.input_image );
+
+    // get the algorithm parameters
+    image_data.algorithm = slic_string_to_int( algorithm_string );
+    image_data.region_size = region_size;
+    image_data.ruler = ruler;
+    image_data.connectivity = connectivity;
+    image_data.num_superpixels = num_superpixels;
+
+    // if num_superpixels provided, set the region size accordingly
+    if (image_data.num_superpixels != 0) {
+        image_data.region_size = std::sqrt( input_image.size().area() / num_superpixels );
+    }
+
+#if DEBUG
+    std::cout << "num_pixels:\t" << image_data.input_image.size().area() << std::endl;
+    std::cout << "num_superpixels:\t" << num_superpixels << std::endl;
+    std::cout << "region_size:\t" << image_data.region_size << std::endl;
+#endif
+
+    return image_data;
+}
+
+// apply segmentation
+void
+process_slic(SLICData* image_data)
+{
+    // segment the image by intensity
+    superpixel( image_data );
+    // convert back to RGB
+    cv::cvtColor( image_data->input_image, image_data->input_image, cv::COLOR_Lab2BGR );
+    // zero-out region of interest
+    image_data->marked_up_image = cv::Mat::zeros( image_data->input_image.size(), image_data->input_image.type() );
+    // draw original map back on
+    draw_on_original( image_data );
+}
+
+// apply input filters, show, save, and initialize mouse callback
+void
+postprocess_slic(
+    SLICData* image_data,
+    bool blur_output,
+    bool equalize_output,
+    bool sharpen_output
+) {
+    // blur the output if given 'b' flag
+    if (blur_output) {
+        cv::GaussianBlur( image_data->marked_up_image, image_data->marked_up_image, cv::Size( 3, 3 ), 3.5f );
+    }
+
+    if (sharpen_output) {
+        cv::Mat tmp;
+        cv::GaussianBlur( image_data->marked_up_image, tmp, cv::Size( 0, 0 ), 3 );
+        cv::addWeighted( image_data->marked_up_image, 1.42, tmp, -0.42, 0, image_data->marked_up_image );
+        tmp.release();
+    }
+
+    // equalize the output if given 'e' flag
+    if (equalize_output) {
+        equalize_image( &image_data->marked_up_image );
+    }
+
+    char metadata[50];
+    std::sprintf( metadata, "a_%d_s_%d_r_%f_c_%d.png",
+        image_data->algorithm,
+        image_data->region_size,
+        image_data->ruler,
+        image_data->connectivity
+    );
+    cv::imshow( image_data->window_name, image_data->marked_up_image );
+    write_img_to_file( image_data->marked_up_image, "./out/slic_output", metadata );
+
+    // initialize the mouse callback
+    init_callback( image_data );
+    init_callback( image_data, "SLIC Label Contours");
+    init_callback( image_data, "SLIC Label Markers" );
+}
+
+// segment images into markers and contours using SLIC algorithms
 void
 superpixel(SLICData* image_data)
 {
@@ -68,7 +203,6 @@ superpixel(SLICData* image_data)
         image_data->ruler,
         image_data->connectivity
     );
-    std::printf( "%s\n", metadata );
 
     // normalize markers for output (won't be recoverable, but looks cool)
     cv::Mat markers;
