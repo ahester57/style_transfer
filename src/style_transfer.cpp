@@ -17,7 +17,7 @@
 #include "../include/segmentation.hpp"
 #include "../include/slic_helper.hpp"
 
-#define DEBUG 2
+#define DEBUG 1
 
 
 const std::string WINDOW_NAME = "SLIC Superpixels";
@@ -44,35 +44,58 @@ transfer_style(SLICData* src, SLICData* dst)
     std::clock_t clock_begin, clock_end;
     clock_begin = std::clock();
 #endif
-    // blur source a lot
-    cv::Mat blurred;
-    cv::GaussianBlur( src->input_image, blurred, cv::Size( 5, 5 ), -3.5 );
+    // blur a lot
+    cv::Mat src_hsv;
+    cv::Mat dst_hsv;
+    cv::GaussianBlur( src->input_image, src_hsv, cv::Size( 5, 5 ), 3.5 );
+    cv::GaussianBlur( dst->input_image, dst_hsv, cv::Size( 5, 5 ), 3.5 );
+
     // use hsv
-    bgr_to_hsv( blurred, &blurred );
+    bgr_to_hsv( src_hsv, &src_hsv );
+    bgr_to_hsv( dst_hsv, &dst_hsv );
+
+    // split hsv into planes hue, saturation, vintensity
+    std::vector<cv::Mat> src_planes;
+    cv::split( src_hsv, src_planes );
+
+    std::vector<cv::Mat> dst_planes;
+    cv::split( dst_hsv, dst_planes );
 
     // normalize markers_32S of src to dst->num_superpixels
     cv::Mat normal_src_markers;
     cv::normalize( src->markers, normal_src_markers, 0, dst->num_superpixels, cv::NORM_MINMAX );
 
+    // loop thru each superpixel
     for (size_t i = 0; i < dst->num_superpixels; i++) {
         int marker_value = static_cast<int>( i );
+        // find the mask for given superpixel
         cv::Mat src_marker_mask = make_background_mask( normal_src_markers, marker_value );
         cv::Mat dst_marker_mask = make_background_mask( dst->markers, marker_value );
-
 #if DEBUG > 1
         cv::imshow("src_marker_mask", src_marker_mask);
         cv::imshow("dst_marker_mask", dst_marker_mask);
         cv::waitKey(1);
 #endif
+        // next, average values for hue, saturation
 
+        // copy hue and saturation from src to dst
         src_marker_mask.release();
         dst_marker_mask.release();
     }
-    // copy hue and sat. of src to dst. leaving value.
 
-    // ... profit?
+    // merge dst_planes back to hsv image
+    cv::merge( dst_planes, dst_hsv );
+    // and convert to bgr
+    hsv_to_bgr( dst_hsv, &dst->marked_up_image );
 
-    blurred.release();
+    for (cv::Mat &img : src_planes) {
+        img.release();
+    }
+    for (cv::Mat &img : dst_planes) {
+        img.release();
+    }
+    src_hsv.release();
+    dst_hsv.release();
 #if DEBUG
     clock_end = std::clock();
     std::printf( "Transfer Style Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
