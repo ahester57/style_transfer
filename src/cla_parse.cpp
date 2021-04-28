@@ -27,14 +27,14 @@ parse_arguments(
         "{@template_image |      | Template image. Provides theme.}"
         "{@target_image   |      | Target image. Provides structure. Defaults to template image.}"
         // "{grayscale g     |      | Read Input As Grayscale}"
-        "{scale sc        |1.f   | Scale input image size using Affine Transform}"
+        "{scale sc        |1.f   | Scale input image size using Affine Transform (0, 10)}"
         "{equalize e      |      | Output Image - Equalize}"
         "{blur b          |      | Output Image - Blur}"
         "{sharpen sh      |      | Output Image - Sharpen}"
         "{algorithm a     |SLIC  | Name of SLIC algorithm variant\n\t\t\t - SLIC segments image using a desired region size\n\t\t\t - SLICO optimizes using an adaptive compactness factor\n\t\t\t - MSLIC optimizes using manifold methods giving more context-sensitive superpixels}"
-        "{region_size s   |10    | Chooses an average superpixel size measured in pixels}"
-        "{ruler r         |10.f  | Chooses the enforcement of superpixel smoothness}"
-        "{connectivity c  |25    | The minimum element size in percents that should be absorbed into a bigger superpixel}"
+        "{region_size s   |10    | Chooses an average superpixel size measured in pixels (0, 400]}"
+        "{ruler r         |10.f  | Chooses the enforcement of superpixel smoothness [0, 100]}"
+        "{connectivity c  |25    | The minimum element size in percents that should be absorbed into a bigger superpixel [0, 100]}"
         "{help h          |      | Show Help Message}";
 
     cv::CommandLineParser parser =  cv::CommandLineParser(argc, argv, keys);

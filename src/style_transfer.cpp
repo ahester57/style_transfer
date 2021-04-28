@@ -12,11 +12,12 @@
 #include "../include/canny.hpp"
 #include "../include/cla_parse.hpp"
 #include "../include/dir_func.hpp"
+#include "../include/hsv_convert.hpp"
 #include "../include/rectangle.hpp"
 #include "../include/segmentation.hpp"
 #include "../include/slic_helper.hpp"
 
-#define DEBUG 1
+#define DEBUG 2
 
 
 const std::string WINDOW_NAME = "SLIC Superpixels";
@@ -39,7 +40,43 @@ wait_key()
 void
 transfer_style(SLICData* src, SLICData* dst)
 {
+#if DEBUG
+    std::clock_t clock_begin, clock_end;
+    clock_begin = std::clock();
+#endif
+    // blur source a lot
+    cv::Mat blurred;
+    cv::GaussianBlur( src->input_image, blurred, cv::Size( 5, 5 ), -3.5 );
+    // use hsv
+    bgr_to_hsv( blurred, &blurred );
 
+    // normalize markers_32S of src to dst->num_superpixels
+    cv::Mat normal_src_markers;
+    cv::normalize( src->markers, normal_src_markers, 0, dst->num_superpixels, cv::NORM_MINMAX );
+
+    for (size_t i = 0; i < dst->num_superpixels; i++) {
+        int marker_value = static_cast<int>( i );
+        cv::Mat src_marker_mask = make_background_mask( normal_src_markers, marker_value );
+        cv::Mat dst_marker_mask = make_background_mask( dst->markers, marker_value );
+
+#if DEBUG > 1
+        cv::imshow("src_marker_mask", src_marker_mask);
+        cv::imshow("dst_marker_mask", dst_marker_mask);
+        cv::waitKey(1);
+#endif
+
+        src_marker_mask.release();
+        dst_marker_mask.release();
+    }
+    // copy hue and sat. of src to dst. leaving value.
+
+    // ... profit?
+
+    blurred.release();
+#if DEBUG
+    clock_end = std::clock();
+    std::printf( "Transfer Style Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+#endif
 }
 
 

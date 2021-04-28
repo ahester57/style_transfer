@@ -12,7 +12,7 @@
 
 cv::Mat distance_finder(cv::Mat borders);
 
-cv::Mat make_background_mask(cv::Mat image);
+cv::Mat make_background_mask(cv::Mat image, int pixel_value = 0);
 
 std::vector<std::vector<cv::Point>> find_distance_contours(cv::Mat distance_transform);
 

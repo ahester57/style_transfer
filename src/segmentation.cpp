@@ -24,12 +24,12 @@ distance_finder(cv::Mat binary_image)
 
 // Trivial "black background only" background finder
 cv::Mat
-make_background_mask(cv::Mat image)
+make_background_mask(cv::Mat image, int pixel_value)
 {
-    //TODO make this better at background detection, not just black backgrounds
+    //TODO make this better at background detection, not just constant backgrounds
     cv::Mat mask;
-    cv::inRange( image, cv::Scalar::all(0), cv::Scalar::all(0), mask );
-    return ~mask;
+    cv::inRange( image, cv::Scalar::all(pixel_value), cv::Scalar::all(pixel_value), mask );
+    return mask;
 }
 
 // find drawable contours from distance transformation

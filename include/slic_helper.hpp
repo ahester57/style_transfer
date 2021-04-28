@@ -45,7 +45,7 @@ void postprocess_slic(
     bool sharpen_output
 );
 
-void superpixel(SLICData* image_data);
+void superpixel_slic(SLICData* image_data);
 
 int slic_string_to_int(std::string algorithm_string);
 

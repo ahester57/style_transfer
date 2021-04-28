@@ -82,6 +82,7 @@ preprocess_slic(
     SLICData image_data;
     image_data.window_name = output_window_name;
     input_image.copyTo( image_data.input_image );
+    input_image.release();
 
     // create mask, only distance filter on foreground
     //TODO make this better at background detection, not just black backgrounds
@@ -96,14 +97,10 @@ preprocess_slic(
 
     // if num_superpixels provided, set the region size accordingly
     if (image_data.num_superpixels != 0) {
-        image_data.region_size = std::sqrt( input_image.size().area() / num_superpixels );
+        image_data.region_size = std::sqrt( image_data.input_image.size().area() / num_superpixels );
+        // flip the connectivity, makes it somehow better match for num_superpixels for a reason i am unaware of
+        image_data.connectivity = 100 - connectivity;
     }
-
-#if DEBUG
-    std::cout << "num_pixels:\t" << image_data.input_image.size().area() << std::endl;
-    std::cout << "num_superpixels:\t" << num_superpixels << std::endl;
-    std::cout << "region_size:\t" << image_data.region_size << std::endl;
-#endif
 
     return image_data;
 }
@@ -113,7 +110,7 @@ void
 process_slic(SLICData* image_data)
 {
     // segment the image by intensity
-    superpixel( image_data );
+    superpixel_slic( image_data );
     // convert back to RGB
     cv::cvtColor( image_data->input_image, image_data->input_image, cv::COLOR_Lab2BGR );
     // zero-out region of interest
@@ -148,7 +145,7 @@ postprocess_slic(
     }
 
     char metadata[50];
-    std::sprintf( metadata, "a_%d_s_%d_r_%f_c_%d.png",
+    std::sprintf( metadata, "a_%d_s_%d_r_%.0f_c_%d.png",
         image_data->algorithm,
         image_data->region_size,
         image_data->ruler,
@@ -165,7 +162,7 @@ postprocess_slic(
 
 // segment images into markers and contours using SLIC algorithms
 void
-superpixel(SLICData* image_data)
+superpixel_slic(SLICData* image_data)
 {
 #if DEBUG
     std::clock_t clock_begin, clock_end;
@@ -194,10 +191,10 @@ superpixel(SLICData* image_data)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "\nSuperpixel Time Elapsed: %f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "\nSuperpixel Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
 
     char metadata[50];
-    std::sprintf( metadata, "a_%d_s_%d_r_%f_c_%d.png",
+    std::sprintf( metadata, "a_%d_s_%d_r_%.0f_c_%d.png",
         image_data->algorithm,
         image_data->region_size,
         image_data->ruler,
@@ -217,8 +214,14 @@ superpixel(SLICData* image_data)
 
     cv::imshow( "SLIC Label Contours", image_data->input_mask );
     write_img_to_file( image_data->input_mask, "./out/slic_contours", metadata );
-    cv::waitKey(0);
 #endif
+
+#if DEBUG
+    std::cout << std::endl << "num_pixels:\t" << image_data->input_image.size().area() << std::endl;
+    std::cout << "num_superpixels:\t" << image_data->num_superpixels << std::endl;
+    std::cout << "region_size:\t" << image_data->region_size << std::endl << std::endl;
+#endif
+
 }
 
 // convert given slic_string type to enum int
