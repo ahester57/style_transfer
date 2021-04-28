@@ -47,8 +47,8 @@ transfer_style(SLICData* src, SLICData* dst)
     // blur a lot
     cv::Mat src_hsv;
     cv::Mat dst_hsv;
-    cv::GaussianBlur( src->input_image, src_hsv, cv::Size( 5, 5 ), 3.5 );
-    cv::GaussianBlur( dst->input_image, dst_hsv, cv::Size( 5, 5 ), 3.5 );
+    cv::GaussianBlur( src->input_image, src_hsv, cv::Size( 3, 3 ), 0.5f );
+    cv::GaussianBlur( dst->input_image, dst_hsv, cv::Size( 3, 3 ), 0.5f );
 
     // use hsv
     bgr_to_hsv( src_hsv, &src_hsv );
@@ -57,50 +57,72 @@ transfer_style(SLICData* src, SLICData* dst)
     // split hsv into planes hue, saturation, vintensity
     std::vector<cv::Mat> src_planes;
     cv::split( src_hsv, src_planes );
+    src_hsv.release();
 
     std::vector<cv::Mat> dst_planes;
     cv::split( dst_hsv, dst_planes );
+    dst_hsv.release();
 
     // normalize markers_32S of src to dst->num_superpixels
     cv::Mat normal_src_markers;
     cv::normalize( src->markers, normal_src_markers, 0, dst->num_superpixels, cv::NORM_MINMAX );
 
+    cv::Mat previous_src_mask;
+    cv::Mat src_marker_mask;
+    cv::Mat dst_marker_mask;
     // loop thru each superpixel
     for (size_t i = 0; i < dst->num_superpixels; i++) {
         int marker_value = static_cast<int>( i );
         // find the mask for given superpixel
-        cv::Mat src_marker_mask = make_background_mask( normal_src_markers, marker_value );
-        cv::Mat dst_marker_mask = make_background_mask( dst->markers, marker_value );
+        src_marker_mask = make_background_mask( normal_src_markers, marker_value );
+        dst_marker_mask = make_background_mask( dst->markers, marker_value );
+
+        // if blank src mask, use previous
+        std::vector<cv::Point> nonzeropixels;
+        cv::findNonZero( src_marker_mask, nonzeropixels );
+        if (nonzeropixels.size() == 0) {
+            previous_src_mask.copyTo( src_marker_mask );
+        } else {
+            src_marker_mask.copyTo( previous_src_mask );
+        }
+
 #if DEBUG > 1
         cv::imshow("src_marker_mask", src_marker_mask);
         cv::imshow("dst_marker_mask", dst_marker_mask);
         cv::waitKey(1);
 #endif
-        // next, average values for hue, saturation
+        // next, average hue, saturation of src
         cv::Scalar src_mean_hue = cv::mean( src_planes[0], src_marker_mask );
         cv::Scalar src_mean_sat = cv::mean( src_planes[1], src_marker_mask );
+        // then average vintensity of both src and dst
+        cv::Scalar src_mean_val = cv::mean( src_planes[2], src_marker_mask );
+        cv::Scalar dst_mean_val = cv::mean( dst_planes[2], dst_marker_mask );
 
         // copy hue and saturation from src to dst
         dst_planes[0].setTo( src_mean_hue, dst_marker_mask );
         dst_planes[1].setTo( src_mean_sat, dst_marker_mask );
+        // average vintensity of both weighing dst
+        dst_planes[2].setTo( (src_mean_val.val[0] + dst_mean_val.val[0] * 5 ) / 6 );
 
-        src_marker_mask.release();
-        dst_marker_mask.release();
+    }
+    normal_src_markers.release();
+    src_marker_mask.release();
+    dst_marker_mask.release();
+    previous_src_mask.release();
+    for (cv::Mat &img : src_planes) {
+        img.release();
     }
 
     // merge dst_planes back to hsv image
     cv::merge( dst_planes, dst_hsv );
-    // and convert to bgr
-    hsv_to_bgr( dst_hsv, &dst->marked_up_image );
-
-    for (cv::Mat &img : src_planes) {
-        img.release();
-    }
     for (cv::Mat &img : dst_planes) {
         img.release();
     }
-    src_hsv.release();
+
+    // and convert to bgr
+    hsv_to_bgr( dst_hsv, &dst->marked_up_image );
     dst_hsv.release();
+
 #if DEBUG
     clock_end = std::clock();
     std::printf( "Transfer Style Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );

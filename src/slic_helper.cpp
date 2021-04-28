@@ -97,9 +97,7 @@ preprocess_slic(
 
     // if num_superpixels provided, set the region size accordingly
     if (image_data.num_superpixels != 0) {
-        image_data.region_size = std::sqrt( image_data.input_image.size().area() / num_superpixels );
-        // flip the connectivity, makes it somehow better match for num_superpixels for a reason i am unaware of
-        image_data.connectivity = 100 - connectivity;
+        image_data.region_size = std::sqrt( image_data.input_image.size().area() / (double) num_superpixels );
     }
 
     return image_data;
@@ -178,7 +176,7 @@ superpixel_slic(SLICData* image_data)
     );
 
     // generate the segments
-    superpixels.get()->iterate(17);
+    superpixels.get()->iterate(10);
     // level of connectivity
     superpixels.get()->enforceLabelConnectivity( image_data->connectivity );
     // label contours
