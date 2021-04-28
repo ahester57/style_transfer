@@ -77,8 +77,13 @@ transfer_style(SLICData* src, SLICData* dst)
         cv::waitKey(1);
 #endif
         // next, average values for hue, saturation
+        cv::Scalar src_mean_hue = cv::mean( src_planes[0], src_marker_mask );
+        cv::Scalar src_mean_sat = cv::mean( src_planes[1], src_marker_mask );
 
         // copy hue and saturation from src to dst
+        dst_planes[0].setTo( src_mean_hue, dst_marker_mask );
+        dst_planes[1].setTo( src_mean_sat, dst_marker_mask );
+
         src_marker_mask.release();
         dst_marker_mask.release();
     }

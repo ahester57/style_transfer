@@ -178,7 +178,7 @@ superpixel_slic(SLICData* image_data)
     );
 
     // generate the segments
-    superpixels.get()->iterate(7);
+    superpixels.get()->iterate(17);
     // level of connectivity
     superpixels.get()->enforceLabelConnectivity( image_data->connectivity );
     // label contours
