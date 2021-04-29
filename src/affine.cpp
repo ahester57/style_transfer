@@ -5,7 +5,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include "../include/affine.hpp"
+#include "affine.hpp"
 
 /*
     Make a right triangle

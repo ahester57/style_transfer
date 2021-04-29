@@ -9,16 +9,16 @@
 #include <iostream>
 #include <map>
 
-#include "../include/slic_helper.hpp"
+#include "slic_helper.hpp"
 
-#include "../include/affine.hpp"
-#include "../include/bitwise_porter_duff_ops.hpp"
-#include "../include/canny.hpp"
-#include "../include/equalize.hpp"
-#include "../include/mouse_callback.hpp"
-#include "../include/rectangle.hpp"
-#include "../include/region_of_interest.hpp"
-#include "../include/segmentation.hpp"
+#include "affine.hpp"
+#include "bitwise_porter_duff_ops.hpp"
+#include "canny.hpp"
+#include "equalize.hpp"
+#include "mouse_callback.hpp"
+#include "rectangle.hpp"
+#include "region_of_interest.hpp"
+#include "segmentation.hpp"
 
 #define DEBUG 1
 
@@ -26,8 +26,8 @@
     #include <opencv2/highgui/highgui.hpp>
     #include <ctime>
 
-    #include "../include/dir_func.hpp"
-    #include "../include/string_helper.hpp"
+    #include "dir_func.hpp"
+    #include "string_helper.hpp"
 #endif
 
 const std::string WINDOW_NAME = "SLIC Superpixels";
@@ -97,7 +97,7 @@ preprocess_slic(
 
     // if num_superpixels provided, set the region size accordingly
     if (image_data.num_superpixels != 0) {
-        image_data.region_size = std::sqrt( image_data.input_image.size().area() / (double) num_superpixels );
+        image_data.region_size = static_cast<int>( std::sqrt( image_data.input_image.size().area() / num_superpixels ) );
     }
 
     return image_data;

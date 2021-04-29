@@ -8,14 +8,14 @@
 
 #include <vector>
 
-#include "../include/affine.hpp"
-#include "../include/canny.hpp"
-#include "../include/cla_parse.hpp"
-#include "../include/dir_func.hpp"
-#include "../include/hsv_convert.hpp"
-#include "../include/rectangle.hpp"
-#include "../include/segmentation.hpp"
-#include "../include/slic_helper.hpp"
+#include "affine.hpp"
+#include "canny.hpp"
+#include "cla_parse.hpp"
+#include "dir_func.hpp"
+#include "hsv_convert.hpp"
+#include "rectangle.hpp"
+#include "segmentation.hpp"
+#include "slic_helper.hpp"
 
 #define DEBUG 1
 
@@ -36,13 +36,14 @@ wait_key()
     return 1;
 }
 
-
 void
 transfer_style(SLICData* src, SLICData* dst)
 {
 #if DEBUG
-    std::clock_t clock_begin, clock_end;
+    std::clock_t clock_begin;
+    std::clock_t clock_end;
     clock_begin = std::clock();
+    // begin clocking split and normalize
 #endif
     // blur a lot
     cv::Mat src_hsv;
@@ -125,7 +126,7 @@ transfer_style(SLICData* src, SLICData* dst)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Transfer Style Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "Merge Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
 #endif
 }
 
