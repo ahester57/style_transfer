@@ -39,9 +39,8 @@ main(int argc, const char** argv)
     std::string target_image_filename;
     int region_size = 10;
     float ruler = 10.f;
-    std::string algorithm_string = "SLIC";
     int connectivity = 25;
-    int quadrant_depth = 1;
+    int quadrant_depth = 2;
 
     // CLA flags
     float scale_image_value = 1.f;
@@ -61,8 +60,8 @@ main(int argc, const char** argv)
         &sharpen_output,
         &region_size,
         &ruler,
-        &algorithm_string,
-        &connectivity
+        &connectivity,
+        &quadrant_depth
     );
     if ( parse_result != 1 ) return parse_result;
 

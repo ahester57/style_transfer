@@ -18,8 +18,8 @@ int parse_arguments(
     bool* sharpen_output,
     int* region_size,
     float* ruler,
-    std::string* algorithm,
-    int* connectivity
+    int* connectivity,
+    int* quadrant_depth
 );
 
 #endif

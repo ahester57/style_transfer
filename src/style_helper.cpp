@@ -151,9 +151,9 @@ process_style_data(StyleTransferData* style_data)
 
 #if DEBUG > 1
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
-        cv::imshow("src_quad_roi", src_quad_rois[0]);
-        cv::imshow("dst_quad_roi", dst_quad_rois[0]);
-        cv::waitKey(500);
+        cv::imshow("src_quad_roi", src_quad_rois[i]);
+        cv::imshow("dst_quad_roi", dst_quad_rois[i]);
+        cv::waitKey(100);
     }
 #endif
 

@@ -8,7 +8,7 @@
 
 #include "region_of_interest.hpp"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG
     #include <opencv2/highgui/highgui.hpp>
@@ -55,15 +55,17 @@ swap_quadrants(cv::Mat* src)
 std::vector<cv::Rect>
 quadrant_cut(cv::Rect src_rect)
 {
-    assert( !(src_rect.x & 1 || src_rect.y & 1) );
-    int c_x = src_rect.x / 2;
-    int c_y = src_rect.y / 2;
+    assert( !( src_rect.x & 1 || src_rect.y & 1 ) );
+    assert( !( src_rect.height & 1 || src_rect.width & 1 ) );
+
+    int c_h = src_rect.height / 2;
+    int c_w = src_rect.width / 2;
 
     std::vector<cv::Rect> quandrants;
-    quandrants.push_back( cv::Rect( 0, 0, c_x, c_y ) ); // top_left
-    quandrants.push_back( cv::Rect( c_x, 0, c_x, c_y ) ); // top_right
-    quandrants.push_back( cv::Rect( 0, c_y, c_x, c_y ) ); // bottom_left
-    quandrants.push_back( cv::Rect( c_x, c_y, c_x, c_y ) );// bottom_right
+    quandrants.push_back( cv::Rect( src_rect.x & -2, src_rect.y & -2                , c_h & -2, c_w & -2 ) ); // top_left
+    quandrants.push_back( cv::Rect( src_rect.x & -2, (src_rect.y + c_w) & -2        , c_h & -2, c_w & -2 ) ); // top_right
+    quandrants.push_back( cv::Rect( (src_rect.x + c_h) & -2, src_rect.y & -2        , c_h & -2, c_w & -2 ) ); // bottom_left
+    quandrants.push_back( cv::Rect( (src_rect.x + c_h) & -2, (src_rect.y + c_w) & -2, c_h & -2, c_w & -2 ) ); // bottom_right
     return quandrants;
 }
 
@@ -79,20 +81,27 @@ quadrant_split_recursive(cv::Rect src_rect, int depth)
         depth_limit_rect.push_back( src_rect );
 #if DEBUG
         std::cout << "depth limit hit" << std::endl;
+        std::cout << src_rect.x << ", " << src_rect.y << ", " << src_rect.height << ", " << src_rect.width << std::endl;
 #endif
         return depth_limit_rect;
     }
     // compute quadrants of src_rect
     std::vector<cv::Rect> quadrants = quadrant_cut( src_rect );
+
     std::vector<cv::Rect> recursive_quads;
     // recursively do all quadrants
     for ( cv::Rect& q : quadrants ) {
         std::vector<cv::Rect> q_quads = quadrant_split_recursive( q, depth - 1 );
         recursive_quads.insert( recursive_quads.end(), q_quads.begin(), q_quads.end() );
-#if DEBUG
-        std::cout << recursive_quads.size() << std::endl;
-#endif
     }
+
+#if DEBUG
+    std::cout << std::endl << "Quadrants:\t" << recursive_quads.size() << std::endl;
+    for ( cv::Rect& q : recursive_quads ) {
+        std::cout << q.x << ", " << q.y << ", " << q.height << ", " << q.width << std::endl;
+    }
+#endif
+
     return recursive_quads;
 }
 

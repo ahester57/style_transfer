@@ -20,8 +20,8 @@ parse_arguments(
     bool* sharpen_output,
     int* region_size,
     float* ruler,
-    std::string* algorithm,
-    int* connectivity
+    int* connectivity,
+    int* quadrant_depth
 ) {
     cv::String keys =
         "{@template_image |      | Template image. Provides theme.}"
@@ -111,14 +111,6 @@ parse_arguments(
         assert( *ruler >= 0.f && *ruler <= 100.f );
     } catch (...) {
         std::cerr << "Failed to parse ruler argument!:" << std::endl;
-        return -1;
-    }
-
-    try {
-        *algorithm = (std::string) parser.get<std::string>( "a" ).c_str();
-        assert( algorithm->size() > 0 );
-    } catch (...) {
-        std::cerr << "Failed to parse algorithm argument!:" << std::endl;
         return -1;
     }
 
