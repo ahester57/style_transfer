@@ -15,11 +15,13 @@ typedef struct {
     // input images
     cv::Mat template_image;
     cv::Mat target_image;
+
     // image quadrants, same size
     std::vector<cv::Rect> template_quadrants;
     std::vector<cv::Rect> target_quadrants;
     // quadrant depth, or how many times to recursively split into 4
     int quadrant_depth;
+
     cv::Mat input_mask;
     cv::Mat region_of_interest;
     cv::Mat markers;

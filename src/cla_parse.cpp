@@ -41,18 +41,17 @@ parse_arguments(
 
     parser.printMessage();
 
-    if (parser.has("h")) {
-        parser.about("About.");
+    if ( parser.has( "h" ) ) {
         return 0;
     }
 
-    if (!parser.check()) {
+    if ( !parser.check() ) {
         parser.printErrors();
         return -1;
     }
 
     try {
-        *template_image_filename = (std::string) parser.get<std::string>(0).c_str();
+        *template_image_filename = (std::string) parser.get<std::string>( 0 ).c_str();
         assert( template_image_filename->size() > 0 );
     } catch (...) {
         std::cerr << "Failed to parse template_image argument!:" << std::endl;
@@ -60,9 +59,9 @@ parse_arguments(
     }
 
     try {
-        *target_image_filename = (std::string) parser.get<std::string>(1).c_str();
-        if (target_image_filename->size() == 0) {
-            *target_image_filename = (std::string) parser.get<std::string>(0).c_str();
+        *target_image_filename = (std::string) parser.get<std::string>( 1 ).c_str();
+        if ( target_image_filename->size() == 0 ) {
+            *target_image_filename = (std::string) parser.get<std::string>( 0 ).c_str();
         }
         assert( target_image_filename->size() > 0 );
     } catch (...) {
@@ -71,7 +70,7 @@ parse_arguments(
     }
 
     try {
-        *scale_image_value = (float) parser.get<float>("sc");
+        *scale_image_value = (float) parser.get<float>( "sc" );
         assert( *scale_image_value > 0.f && *scale_image_value < 10.f );
     } catch (...) {
         std::cerr << "Failed to parse scale argument!:" << std::endl;
@@ -79,28 +78,28 @@ parse_arguments(
     }
 
     try {
-        *blur_output = parser.has("b");
+        *blur_output = parser.has( "b" );
     } catch (...) {
         std::cerr << "Failed to parse blur argument!:" << std::endl;
         return -1;
     }
 
     try {
-        *equalize_output = parser.has("e");
+        *equalize_output = parser.has( "e" );
     } catch (...) {
         std::cerr << "Failed to parse equalize argument!:" << std::endl;
         return -1;
     }
 
     try {
-        *sharpen_output = parser.has("sh");
+        *sharpen_output = parser.has( "sh" );
     } catch (...) {
         std::cerr << "Failed to parse sharpen argument!:" << std::endl;
         return -1;
     }
 
     try {
-        *region_size = parser.get<int>("s");
+        *region_size = parser.get<int>( "s" );
         assert( *region_size > 0 && *region_size <= 400 );
     } catch (...) {
         std::cerr << "Failed to parse region_size argument!:" << std::endl;
@@ -108,7 +107,7 @@ parse_arguments(
     }
 
     try {
-        *ruler = parser.get<float>("r");
+        *ruler = parser.get<float>( "r" );
         assert( *ruler >= 0.f && *ruler <= 100.f );
     } catch (...) {
         std::cerr << "Failed to parse ruler argument!:" << std::endl;
@@ -116,7 +115,7 @@ parse_arguments(
     }
 
     try {
-        *algorithm = (std::string) parser.get<std::string>("a").c_str();
+        *algorithm = (std::string) parser.get<std::string>( "a" ).c_str();
         assert( algorithm->size() > 0 );
     } catch (...) {
         std::cerr << "Failed to parse algorithm argument!:" << std::endl;
@@ -124,7 +123,7 @@ parse_arguments(
     }
 
     try {
-        *connectivity = parser.get<int>("c");
+        *connectivity = parser.get<int>( "c" );
         assert( *connectivity >= 0 && *connectivity <= 100 );
     } catch (...) {
         std::cerr << "Failed to parse connectivity argument!:" << std::endl;

@@ -25,14 +25,13 @@ draw_canny_contours(cv::Mat image)
     std::vector<std::vector<cv::Point>> contours;
     std::vector<cv::Vec4i> hierarchy;
     cv::findContours( canny_output, contours, hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE );
+    canny_output.release();
 
     // draw the contours
-    cv::Mat canvas = cv::Mat::zeros( canny_output.size(), CV_8U );
-    for (size_t i = 0; i < contours.size(); i++) {
+    cv::Mat canvas = cv::Mat::zeros( image.size(), CV_8U );
+    for ( size_t i = 0; i < contours.size(); i++ ) {
         cv::drawContours( canvas, contours, i, cv::Scalar(255), 1, cv::LINE_8, hierarchy, 2 );
     }
-
-    canny_output.release();
     return canvas;
 }
 
@@ -57,9 +56,9 @@ draw_color_canny_contours(cv::Mat image, int hsv_plane)
     // canny edge detection, returning contour map
     cv::Mat canny_edges = draw_canny_contours( hsv_planes[hsv_plane] );
 
-    hsv_planes[0].release();
-    hsv_planes[1].release();
-    hsv_planes[2].release();
+    for ( cv::Mat &img : hsv_planes ) {
+        img.release();
+    }
     hsv_image.release();
     return canny_edges;
 }

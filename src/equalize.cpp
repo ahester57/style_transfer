@@ -17,9 +17,9 @@ equalize_image(cv::Mat* image)
     int n_channels = image->channels();
     assert( n_channels == 1 || n_channels == 3 );
 
-    if (n_channels == 1) {
+    if ( n_channels == 1 ) {
         cv::equalizeHist( *image, *image );
-    } else if (n_channels == 3) {
+    } else if ( n_channels == 3 ) {
         cv::Mat hsv_image;
         bgr_to_hsv( *image, &hsv_image );
         cv::Mat hsv_planes[3];

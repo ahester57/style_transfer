@@ -14,12 +14,12 @@ center_and_double_rect(cv::Rect rect, cv::Size target_size)
 {
     int old_x = rect.x;
     rect.x = target_size.width / 2 - rect.width;
-    if (old_x < 0) {
+    if ( old_x < 0 ) {
         rect.x += 2 * old_x;
     }
     int old_y = rect.y;
     rect.y = target_size.height / 2 - rect.height;
-    if (old_y < 0) {
+    if ( old_y < 0 ) {
         rect.y += 2 * old_y;
     }
     //TODO figure this out just padding for now
@@ -39,7 +39,7 @@ std::vector<cv::Rect>
 draw_bounding_rects(std::vector<std::vector<cv::Point>> contours)
 {
     std::vector<cv::Rect> boundaries = std::vector<cv::Rect>( contours.size() );
-    for (size_t i = 0; i < contours.size(); i++) {
+    for ( size_t i = 0; i < contours.size(); i++ ) {
         int ii = static_cast<int>( i );
         std::vector<cv::Point> contours_poly;
         cv::approxPolyDP( contours[ii], contours_poly, 1, true );

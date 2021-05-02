@@ -62,7 +62,7 @@ cv::Mat
 draw_contours_as_markers(std::vector<std::vector<cv::Point>> contours, cv::Size canvas_size)
 {
     cv::Mat markers = cv::Mat::zeros( canvas_size, CV_32S );
-    for (size_t i = 0; i < contours.size(); i++) {
+    for ( size_t i = 0; i < contours.size(); i++ ) {
         int ii = static_cast<int>( i );
         cv::drawContours( markers, contours, ii, cv::Scalar( i + 1 ), -1 );
     }

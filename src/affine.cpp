@@ -10,13 +10,13 @@
 /*
     Make a right triangle
 */
-cv::Point2f*
-make_right_triangle(float a, float b)
+std::vector<cv::Point2f>
+make_right_triangle(float x, float y)
 {
-    cv::Point2f* points = (cv::Point2f*) malloc( sizeof(cv::Point2f) * 3 );
-    points[0] = cv::Point2f( 0.f, 0.f );
-    points[1] = cv::Point2f( a, 0.f );
-    points[2] = cv::Point2f( 0.f, b );
+    std::vector<cv::Point2f> points;
+    points.push_back( cv::Point2f( 0.f, 0.f ) );
+    points.push_back( cv::Point2f( x, 0.f ) );
+    points.push_back( cv::Point2f( 0.f, y ) );
     return points;
 }
 
@@ -24,11 +24,11 @@ make_right_triangle(float a, float b)
 cv::Mat
 resize_affine(cv::Mat src, float scale)
 {
-    assert( src.rows * scale <= 3840 && src.cols * scale <= 3840 );
+    assert( (src.rows * scale <= 3840) && (src.cols * scale <= 3840) );
 
     // save these to a variable so we can delete them later, thanks C
-    cv::Point2f* src_points = make_right_triangle( src.cols - 1.f, src.rows - 1.f );
-    cv::Point2f* dst_points = make_right_triangle( src.cols * scale, src.rows * scale );
+    std::vector<cv::Point2f> src_points = make_right_triangle( src.cols - 1.f, src.rows - 1.f );
+    std::vector<cv::Point2f> dst_points = make_right_triangle( (src.cols - 1.f) * scale, (src.rows - 1.f) * scale );
 
     cv::Mat warp_mat = cv::getAffineTransform( src_points, dst_points );
 
@@ -37,8 +37,6 @@ resize_affine(cv::Mat src, float scale)
     cv::warpAffine( src, warp_dst, warp_mat, warp_dst.size() );
 
     warp_mat.release();
-    delete src_points;
-    delete dst_points;
 
     return warp_dst;
 }

@@ -24,7 +24,7 @@ wait_key()
 {
     char key_pressed = cv::waitKey(0) & 255;
     // 'q' or  <escape> quits out
-    if (key_pressed == 27 || key_pressed == 'q') {
+    if ( key_pressed == 27 || key_pressed == 'q' ) {
         return 0;
     }
     return 1;
@@ -64,7 +64,7 @@ main(int argc, const char** argv)
         &algorithm_string,
         &connectivity
     );
-    if (parse_result != 1) return parse_result;
+    if ( parse_result != 1 ) return parse_result;
 
 #if DEBUG
     std::clock_t clock_begin;
@@ -118,7 +118,7 @@ main(int argc, const char** argv)
 #endif
 
     // 'event loop' for keypresses
-    while (wait_key());
+    while ( wait_key() );
 
     cv::destroyAllWindows();
 

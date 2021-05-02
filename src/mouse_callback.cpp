@@ -24,7 +24,7 @@ mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
 {
     StyleTransferData* style_data = (StyleTransferData*) userdata;
 
-    switch (event) {
+    switch ( event ) {
 
     // RIGHT MOUSE BUTTON
         case cv::EVENT_RBUTTONUP:
@@ -40,7 +40,7 @@ mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
     // LEFT MOUSE BUTTON
         case cv::EVENT_LBUTTONUP:
             // check bounds (needed if double ROI is larger than input image
-            if (x > style_data->markers.size().width || y > style_data->markers.size().height) {
+            if ( x > style_data->markers.size().width || y > style_data->markers.size().height ) {
 #if DEBUG
                 std::cout << "OOB" << std::endl;
 #endif
@@ -54,7 +54,7 @@ mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
             std::cout << "Marker Value:\t\t" << marker_value << std::endl;
 #endif
             // check marker exists
-            if (marker_value < 0 || marker_value > style_data->num_superpixels-1) {
+            if ( marker_value < 0 || marker_value > style_data->num_superpixels-1 ) {
 #if DEBUG
                 std::cout << "Marker Out of Range." << std::endl;
 #endif

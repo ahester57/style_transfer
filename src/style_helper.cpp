@@ -17,13 +17,11 @@
 #include "mouse_callback.hpp"
 #include "quadrant.hpp"
 
-#define DEBUG 1
+#define DEBUG 2
 
 #if DEBUG
     #include <opencv2/highgui/highgui.hpp>
     #include <ctime>
-
-    #include "string_helper.hpp"
 #endif
 
 const std::string WINDOW_NAME = "Style Transfer";
@@ -43,11 +41,12 @@ preprocess_style_data(
     int num_superpixels,
     int quadrant_depth
 ) {
+    // open images by filename
     cv::Mat template_image = open_image( template_filename );
     cv::Mat target_image = open_image( target_filename );
 
     // scale the input size if given 's' flag
-    if (scale_image_value != 1.f) {
+    if ( scale_image_value != 1.f ) {
         template_image = resize_affine( template_image, scale_image_value );
         target_image = resize_affine( target_image, scale_image_value );
     }
@@ -56,14 +55,15 @@ preprocess_style_data(
     template_image = template_image(
         cv::Rect( 0, 0, template_image.cols & -2, template_image.rows & -2 )
     );
-    std::cout << "Scaled Template Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
     target_image = target_image(
         cv::Rect( 0, 0, target_image.cols & -2, target_image.rows & -2 )
     );
+
+    std::cout << "Scaled Template Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
     std::cout << "Scaled Target Image size is:\t\t" << target_image.cols << "x" << target_image.rows << std::endl;
 
     // pad the input image if given flag
-    if (pad_input) {
+    if ( pad_input ) {
         cv::copyMakeBorder( template_image, template_image, 50, 50, 50, 50, cv::BORDER_CONSTANT, cv::Scalar(0) );
         std::cout << "Padded Template Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
         cv::copyMakeBorder( target_image, target_image, 50, 50, 50, 50, cv::BORDER_CONSTANT, cv::Scalar(0) );
@@ -79,9 +79,9 @@ preprocess_style_data(
     bgr_to_hsv( target_image, &target_image );
 
 #if DEBUG > 1
-    cv::imshow( WINDOW_NAME, input_image );
-    // 'event loop' for keypresses
-    while (wait_key());
+    cv::imshow( WINDOW_NAME + " Template Image", template_image );
+    cv::imshow( WINDOW_NAME + " Target Image", target_image );
+    cv::waitKey(0);
 #endif
 
     std::string output_window_name = WINDOW_NAME + " Output Image";
@@ -103,7 +103,7 @@ preprocess_style_data(
     style_data.num_superpixels = num_superpixels;
 
     // if num_superpixels provided, set the region size accordingly
-    if (style_data.num_superpixels != 0) {
+    if ( style_data.num_superpixels != 0 ) {
         style_data.region_size = static_cast<int>( std::sqrt( style_data.template_image.size().area() / num_superpixels ) );
     }
 
@@ -131,7 +131,7 @@ process_style_data(StyleTransferData* style_data)
     std::clock_t clock_begin;
     std::clock_t clock_end;
     clock_begin = std::clock();
-    // begin clocking mask generator
+    // begin clocking ROI generator
 #endif
 
     // TEMPLATE
@@ -144,6 +144,14 @@ process_style_data(StyleTransferData* style_data)
         style_data->target_image,
         style_data->target_quadrants
     );
+
+#if DEBUG > 1
+    for ( int i = 0; i = std::pow( 4, style_data->quadrant_depth ); i++ ) {
+        cv::imshow("src_quad_roi", src_quad_rois[i]);
+        cv::imshow("dst_quad_roi", dst_quad_rois[i]);
+        cv::waitKey(1);
+    }
+#endif
 
 #if DEBUG
     clock_end = std::clock();
@@ -160,7 +168,7 @@ process_style_data(StyleTransferData* style_data)
     cv::split( style_data->target_image, dst_planes );
 
     // loop thru each superpixel to transfer style (mean)
-    for (size_t i = 0; i < style_data->num_superpixels; i++) {
+    for ( size_t i = 0; i < style_data->num_superpixels; i++ ) {
         int marker_value = static_cast<int>( i );
         // find the mask for given superpixel
         cv::Mat src_quad_roi = src_quad_rois.at( marker_value );
@@ -188,13 +196,13 @@ process_style_data(StyleTransferData* style_data)
     }
 
     // release ROIs and source planes
-    for (cv::Mat &img : src_quad_rois) {
+    for ( cv::Mat &img : src_quad_rois ) {
         img.release();
     }
-    for (cv::Mat &img : dst_quad_rois) {
+    for ( cv::Mat &img : dst_quad_rois ) {
         img.release();
     }
-    for (cv::Mat &img : src_planes) {
+    for ( cv::Mat &img : src_planes ) {
         img.release();
     }
 
@@ -206,7 +214,7 @@ process_style_data(StyleTransferData* style_data)
 
     // merge dst_planes back to hsv image
     cv::merge( dst_planes, style_data->marked_up_image );
-    for (cv::Mat &img : dst_planes) {
+    for ( cv::Mat &img : dst_planes ) {
         img.release();
     }
 
@@ -229,11 +237,11 @@ postprocess_style_data(
     bool sharpen_output
 ) {
     // blur the output if given 'b' flag
-    if (blur_output) {
+    if ( blur_output ) {
         cv::GaussianBlur( style_data->marked_up_image, style_data->marked_up_image, cv::Size( 3, 3 ), 3.5f );
     }
 
-    if (sharpen_output) {
+    if ( sharpen_output ) {
         cv::Mat tmp;
         cv::GaussianBlur( style_data->marked_up_image, tmp, cv::Size( 0, 0 ), 3 );
         cv::addWeighted( style_data->marked_up_image, 1.42, tmp, -0.42, 0, style_data->marked_up_image );
@@ -241,7 +249,7 @@ postprocess_style_data(
     }
 
     // equalize the output if given 'e' flag
-    if (equalize_output) {
+    if ( equalize_output ) {
         equalize_image( &style_data->marked_up_image );
     }
 

@@ -18,8 +18,8 @@ split (std::string s, char delim)
     std::stringstream ss (s);
     std::string item;
 
-    while (std::getline (ss, item, delim)) {
-        result.push_back (item);
+    while ( std::getline( ss, item, delim ) ) {
+        result.push_back( item );
     }
     return result;
 }
@@ -46,7 +46,7 @@ cv_type_to_str(cv::Mat img)
     }
 
     r += "C";
-    r += std::to_string(channels);
+    r += std::to_string( channels );
 
     return r;
 }

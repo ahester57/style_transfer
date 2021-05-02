@@ -7,6 +7,8 @@
 
 #include <opencv2/core/core.hpp>
 
+std::vector<cv::Point2f> make_right_triangle(float x, float y);
+
 cv::Mat resize_affine(cv::Mat src, float scale);
 
 #endif
