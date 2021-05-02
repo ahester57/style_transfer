@@ -9,6 +9,7 @@
 #include "mouse_callback.hpp"
 
 #include "dir_func.hpp"
+#include "style_helper.hpp"
 
 #define DEBUG 1
 
@@ -21,26 +22,25 @@
 void
 mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
 {
-    StyleTransferData* image_data = (StyleTransferData*) userdata;
+    StyleTransferData* style_data = (StyleTransferData*) userdata;
 
     switch (event) {
 
     // RIGHT MOUSE BUTTON
         case cv::EVENT_RBUTTONUP:
             // zero-out region of interest
-            image_data->marked_up_image = cv::Mat::zeros( image_data->template_image.size(), image_data->template_image.type() );
+            style_data->marked_up_image = cv::Mat::zeros( style_data->template_image.size(), style_data->template_image.type() );
 
-            // draw original map back on
-            draw_on_original( image_data );
+            // right click blanks atm.
 
             // show marked_up_image
-            cv::imshow( image_data->window_name, image_data->marked_up_image );
+            cv::imshow( style_data->window_name, style_data->marked_up_image );
             break;
 
     // LEFT MOUSE BUTTON
         case cv::EVENT_LBUTTONUP:
             // check bounds (needed if double ROI is larger than input image
-            if (x > image_data->markers.size().width || y > image_data->markers.size().height) {
+            if (x > style_data->markers.size().width || y > style_data->markers.size().height) {
 #if DEBUG
                 std::cout << "OOB" << std::endl;
 #endif
@@ -48,39 +48,33 @@ mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
             }
 
             // find the marker at that point
-            int marker_value = image_data->markers.at<int>( y, x );
+            int marker_value = style_data->markers.at<int>( y, x );
 
 #if DEBUG
             std::cout << "Marker Value:\t\t" << marker_value << std::endl;
 #endif
             // check marker exists
-            if (marker_value < 0 || marker_value > image_data->num_superpixels-1) {
+            if (marker_value < 0 || marker_value > style_data->num_superpixels-1) {
 #if DEBUG
                 std::cout << "Marker Out of Range." << std::endl;
 #endif
                 break;
             }
 
-            // extract region_of_interest
-            select_region( image_data, marker_value );
-
-            // show region_of_interest in new window
-            // cv::imshow( "region_of_interest", image_data->region_of_interest );
-
             // show marked_up_image
-            cv::imshow( image_data->window_name, image_data->marked_up_image );
+            cv::imshow( style_data->window_name, style_data->marked_up_image );
 
             // save marked_up_image
             char metadata[50];
             std::sprintf( metadata, "regions/out_a_%d_s_%d_r_%f_c_%d_m_%d.png",
-                image_data->algorithm,
-                image_data->region_size,
-                image_data->ruler,
-                image_data->connectivity,
+                style_data->algorithm,
+                style_data->region_size,
+                style_data->ruler,
+                style_data->connectivity,
                 marker_value
             );
             write_img_to_file(
-                image_data->marked_up_image,
+                style_data->marked_up_image,
                 "./out",
                 metadata
             );
@@ -92,13 +86,13 @@ mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
 
 // assign mouse callbacks
 void
-init_callback(StyleTransferData* image_data)
+init_callback(StyleTransferData* style_data)
 {
-    cv::setMouseCallback( image_data->window_name, mouse_callback_draw_zeros, image_data );
+    cv::setMouseCallback( style_data->window_name, mouse_callback_draw_zeros, style_data );
 }
 
 void
-init_callback(StyleTransferData* image_data, std::string window_name)
+init_callback(StyleTransferData* style_data, std::string window_name)
 {
-    cv::setMouseCallback( window_name, mouse_callback_draw_zeros, image_data );
+    cv::setMouseCallback( window_name, mouse_callback_draw_zeros, style_data );
 }

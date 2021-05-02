@@ -6,13 +6,13 @@
 #ifndef MOUSE_CALLBACK_H
 #define MOUSE_CALLBACK_H
 
-#include "./slic_helper.hpp"
+#include "./style_helper.hpp"
 
 
 void mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata);
 
-void init_callback(StyleTransferData* frequency_mask);
+void init_callback(StyleTransferData* style_data);
 
-void init_callback(StyleTransferData* image_data, std::string window_name);
+void init_callback(StyleTransferData* style_data, std::string window_name);
 
 #endif
