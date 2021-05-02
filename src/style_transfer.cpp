@@ -79,7 +79,6 @@ main(int argc, const char** argv)
         target_image_filename,
         scale_image_value,
         pad_input,
-        algorithm_string,
         region_size,
         ruler,
         connectivity,

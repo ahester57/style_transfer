@@ -8,6 +8,13 @@
 
 #include "region_of_interest.hpp"
 
+#define DEBUG 1
+
+#if DEBUG
+    #include <opencv2/highgui/highgui.hpp>
+    #include <iostream>
+#endif
+
 
 // swap images
 void
@@ -63,9 +70,16 @@ quadrant_cut(cv::Rect src_rect)
 std::vector<cv::Rect>
 quadrant_split_recursive(cv::Rect src_rect, int depth)
 {
+#if DEBUG
+        std::cout << "depth: " << depth << std::endl;
+#endif
     if ( depth == 0 ) {
+        // return given rect when depth limit hit
         std::vector<cv::Rect> depth_limit_rect;
         depth_limit_rect.push_back( src_rect );
+#if DEBUG
+        std::cout << "depth limit hit" << std::endl;
+#endif
         return depth_limit_rect;
     }
     // compute quadrants of src_rect
@@ -74,7 +88,10 @@ quadrant_split_recursive(cv::Rect src_rect, int depth)
     // recursively do all quadrants
     for ( cv::Rect& q : quadrants ) {
         std::vector<cv::Rect> q_quads = quadrant_split_recursive( q, depth - 1 );
-        recursive_quads.insert( recursive_quads.begin(), q_quads.begin(), q_quads.end() );
+        recursive_quads.insert( recursive_quads.end(), q_quads.begin(), q_quads.end() );
+#if DEBUG
+        std::cout << recursive_quads.size() << std::endl;
+#endif
     }
     return recursive_quads;
 }

@@ -30,7 +30,6 @@ typedef struct {
     int region_size;
     float ruler;
     int connectivity;
-    int num_superpixels;
 
 } StyleTransferData;
 
@@ -40,12 +39,10 @@ StyleTransferData preprocess_style_data(
     std::string target_filename,
     float scale_image_value,
     bool pad_input,
-    std::string algorithm_string,
     int region_size,
     float ruler,
     int connectivity,
-    int num_superpixels = 0,
-    int quadrant_depth = 0
+    int quadrant_depth = 1
 );
 
 void process_style_data(StyleTransferData* style_data);

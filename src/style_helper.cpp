@@ -34,11 +34,9 @@ preprocess_style_data(
     std::string target_filename,
     float scale_image_value,
     bool pad_input,
-    std::string algorithm_string,
     int region_size,
     float ruler,
     int connectivity,
-    int num_superpixels,
     int quadrant_depth
 ) {
     // open images by filename
@@ -100,12 +98,7 @@ preprocess_style_data(
     style_data.region_size = region_size;
     style_data.ruler = ruler;
     style_data.connectivity = connectivity;
-    style_data.num_superpixels = num_superpixels;
-
-    // if num_superpixels provided, set the region size accordingly
-    if ( style_data.num_superpixels != 0 ) {
-        style_data.region_size = static_cast<int>( std::sqrt( style_data.template_image.size().area() / num_superpixels ) );
-    }
+    style_data.quadrant_depth = quadrant_depth;
 
     // TEMPLATE
     // split images into equal amount of quadrants.
@@ -116,6 +109,17 @@ preprocess_style_data(
     // split images into equal amount of quadrants.
     cv::Rect target_rect = cv::Rect( 0, 0, style_data.target_image.cols, style_data.target_image.rows );
     style_data.target_quadrants = quadrant_split_recursive( target_rect, quadrant_depth );
+
+#if DEBUG
+    std::cout << std::endl << "Template Quadrants:\t" << style_data.template_quadrants.size() << std::endl;
+    for ( cv::Rect& q : style_data.template_quadrants ) {
+        std::cout << q.x << ", " << q.y << ", " << q.area() << std::endl;
+    }
+    std::cout << "Target Quadrants:\t" << style_data.target_quadrants.size() << std::endl;
+    for ( cv::Rect& q : style_data.target_quadrants ) {
+        std::cout << q.x << ", " << q.y << ", " << q.area() << std::endl;
+    }
+#endif
 
     return style_data;
 }
@@ -131,7 +135,7 @@ process_style_data(StyleTransferData* style_data)
     std::clock_t clock_begin;
     std::clock_t clock_end;
     clock_begin = std::clock();
-    // begin clocking ROI generator
+    std::cout << std::endl << "Begin ROI Generator" << std::endl;
 #endif
 
     // TEMPLATE
@@ -146,10 +150,10 @@ process_style_data(StyleTransferData* style_data)
     );
 
 #if DEBUG > 1
-    for ( int i = 0; i = std::pow( 4, style_data->quadrant_depth ); i++ ) {
-        cv::imshow("src_quad_roi", src_quad_rois[i]);
-        cv::imshow("dst_quad_roi", dst_quad_rois[i]);
-        cv::waitKey(1);
+    for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
+        cv::imshow("src_quad_roi", src_quad_rois[0]);
+        cv::imshow("dst_quad_roi", dst_quad_rois[0]);
+        cv::waitKey(500);
     }
 #endif
 
@@ -157,7 +161,7 @@ process_style_data(StyleTransferData* style_data)
     clock_end = std::clock();
     std::printf( "ROI Generator Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
-    // begin clocking style transfer
+    std::cout << std::endl << "Begin Style Transfer" << std::endl;
 #endif
 
     // split hsv into planes hue[0], saturation[1], vintensity[2]
@@ -168,11 +172,11 @@ process_style_data(StyleTransferData* style_data)
     cv::split( style_data->target_image, dst_planes );
 
     // loop thru each superpixel to transfer style (mean)
-    for ( size_t i = 0; i < style_data->num_superpixels; i++ ) {
-        int marker_value = static_cast<int>( i );
+    for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
+
         // find the mask for given superpixel
-        cv::Mat src_quad_roi = src_quad_rois.at( marker_value );
-        cv::Mat dst_quad_roi = dst_quad_rois.at( marker_value );
+        cv::Mat src_quad_roi = src_quad_rois.at( i );
+        cv::Mat dst_quad_roi = dst_quad_rois.at( i );
 
         // average hue
         cv::Scalar src_mean_hue = cv::mean( src_planes[0], src_quad_roi );
@@ -208,7 +212,7 @@ process_style_data(StyleTransferData* style_data)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Transfer Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "Style Transfer Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
 #endif
 
@@ -236,6 +240,9 @@ postprocess_style_data(
     bool equalize_output,
     bool sharpen_output
 ) {
+    assert( style_data != NULL);
+    assert( !style_data->marked_up_image.empty() );
+
     // blur the output if given 'b' flag
     if ( blur_output ) {
         cv::GaussianBlur( style_data->marked_up_image, style_data->marked_up_image, cv::Size( 3, 3 ), 3.5f );
