@@ -15,26 +15,20 @@ parse_arguments(
     std::string* template_image_filename,
     std::string* target_image_filename,
     float* scale_image_value,
+    int* quadrant_depth,
     bool* blur_output,
     bool* equalize_output,
-    bool* sharpen_output,
-    int* region_size,
-    float* ruler,
-    int* connectivity,
-    int* quadrant_depth
+    bool* sharpen_output
 ) {
     cv::String keys =
         "{@template_image |      | Template image. Provides theme.}"
         "{@target_image   |      | Target image. Provides structure. Defaults to template image.}"
         // "{grayscale g     |      | Read Input As Grayscale}"
-        "{scale sc        |1.f   | Scale input image size using Affine Transform (0, 10)}"
+        "{scale sc        |1.f   | Scale input image size using Affine Transform. (0, 10)}"
+        "{quadrant_depth q|2     | Quadrant Depth. How many times to split. [0, 8]}"
         "{equalize e      |      | Output Image - Equalize}"
         "{blur b          |      | Output Image - Blur}"
         "{sharpen sh      |      | Output Image - Sharpen}"
-        "{algorithm a     |SLIC  | Name of SLIC algorithm variant\n\t\t\t - SLIC segments image using a desired region size\n\t\t\t - SLICO optimizes using an adaptive compactness factor\n\t\t\t - MSLIC optimizes using manifold methods giving more context-sensitive superpixels}"
-        "{region_size s   |10    | Chooses an average superpixel size measured in pixels (0, 400]}"
-        "{ruler r         |10.f  | Chooses the enforcement of superpixel smoothness [0, 100]}"
-        "{connectivity c  |25    | The minimum element size in percents that should be absorbed into a bigger superpixel [0, 100]}"
         "{help h          |      | Show Help Message}";
 
     cv::CommandLineParser parser =  cv::CommandLineParser(argc, argv, keys);
@@ -78,6 +72,14 @@ parse_arguments(
     }
 
     try {
+        *quadrant_depth = parser.get<int>( "q" );
+        assert( *quadrant_depth >= 0 && *quadrant_depth <= 8 );
+    } catch (...) {
+        std::cerr << "Failed to parse region_size argument!:" << std::endl;
+        return -1;
+    }
+
+    try {
         *blur_output = parser.has( "b" );
     } catch (...) {
         std::cerr << "Failed to parse blur argument!:" << std::endl;
@@ -95,30 +97,6 @@ parse_arguments(
         *sharpen_output = parser.has( "sh" );
     } catch (...) {
         std::cerr << "Failed to parse sharpen argument!:" << std::endl;
-        return -1;
-    }
-
-    try {
-        *region_size = parser.get<int>( "s" );
-        assert( *region_size > 0 && *region_size <= 400 );
-    } catch (...) {
-        std::cerr << "Failed to parse region_size argument!:" << std::endl;
-        return -1;
-    }
-
-    try {
-        *ruler = parser.get<float>( "r" );
-        assert( *ruler >= 0.f && *ruler <= 100.f );
-    } catch (...) {
-        std::cerr << "Failed to parse ruler argument!:" << std::endl;
-        return -1;
-    }
-
-    try {
-        *connectivity = parser.get<int>( "c" );
-        assert( *connectivity >= 0 && *connectivity <= 100 );
-    } catch (...) {
-        std::cerr << "Failed to parse connectivity argument!:" << std::endl;
         return -1;
     }
 

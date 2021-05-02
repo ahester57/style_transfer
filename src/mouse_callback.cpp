@@ -66,11 +66,8 @@ mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
 
             // save marked_up_image
             char metadata[50];
-            std::sprintf( metadata, "regions/out_a_%d_s_%d_r_%f_c_%d_m_%d.png",
-                style_data->algorithm,
-                style_data->region_size,
-                style_data->ruler,
-                style_data->connectivity,
+            std::sprintf( metadata, "regions/out_q_%dm_%d.png",
+                style_data->quadrant_depth,
                 marker_value
             );
             write_img_to_file(

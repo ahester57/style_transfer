@@ -33,10 +33,6 @@ preprocess_style_data(
     std::string template_filename,
     std::string target_filename,
     float scale_image_value,
-    bool pad_input,
-    int region_size,
-    float ruler,
-    int connectivity,
     int quadrant_depth
 ) {
     // open images by filename
@@ -59,14 +55,6 @@ preprocess_style_data(
 
     std::cout << "Scaled Template Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
     std::cout << "Scaled Target Image size is:\t\t" << target_image.cols << "x" << target_image.rows << std::endl;
-
-    // pad the input image if given flag
-    if ( pad_input ) {
-        cv::copyMakeBorder( template_image, template_image, 50, 50, 50, 50, cv::BORDER_CONSTANT, cv::Scalar(0) );
-        std::cout << "Padded Template Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
-        cv::copyMakeBorder( target_image, target_image, 50, 50, 50, 50, cv::BORDER_CONSTANT, cv::Scalar(0) );
-        std::cout << "Padded Target Image size is:\t\t" << target_image.cols << "x" << target_image.rows << std::endl;
-    }
 
     // blur
     cv::GaussianBlur( template_image, template_image, cv::Size( 3, 3 ), 0.5f );
@@ -252,11 +240,8 @@ postprocess_style_data(
     }
 
     char metadata[50];
-    std::sprintf( metadata, "a_%d_s_%d_r_%.0f_c_%d.png",
-        style_data->algorithm,
-        style_data->region_size,
-        style_data->ruler,
-        style_data->connectivity
+    std::sprintf( metadata, "q_%d.png",
+        style_data->quadrant_depth
     );
     cv::imshow( style_data->window_name, style_data->marked_up_image );
     write_img_to_file( style_data->marked_up_image, "./out/style_output", metadata );

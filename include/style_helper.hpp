@@ -23,13 +23,8 @@ typedef struct {
     int quadrant_depth;
 
     cv::Mat input_mask;
-    cv::Mat region_of_interest;
     cv::Mat markers;
     cv::Mat marked_up_image;
-    int algorithm;
-    int region_size;
-    float ruler;
-    int connectivity;
 
 } StyleTransferData;
 
@@ -38,10 +33,6 @@ StyleTransferData preprocess_style_data(
     std::string template_filename,
     std::string target_filename,
     float scale_image_value,
-    bool pad_input,
-    int region_size,
-    float ruler,
-    int connectivity,
     int quadrant_depth = 1
 );
 

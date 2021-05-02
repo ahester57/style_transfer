@@ -13,13 +13,10 @@ int parse_arguments(
     std::string* template_image_filename,
     std::string* target_image_filename,
     float* scale_image_value,
+    int* quadrant_depth,
     bool* blur_output,
     bool* equalize_output,
-    bool* sharpen_output,
-    int* region_size,
-    float* ruler,
-    int* connectivity,
-    int* quadrant_depth
+    bool* sharpen_output
 );
 
 #endif

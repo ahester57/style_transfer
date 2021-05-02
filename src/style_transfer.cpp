@@ -37,17 +37,13 @@ main(int argc, const char** argv)
     // CLA variables
     std::string template_image_filename;
     std::string target_image_filename;
-    int region_size = 10;
-    float ruler = 10.f;
-    int connectivity = 25;
+    float scale_image_value = 1.f;
     int quadrant_depth = 2;
 
     // CLA flags
-    float scale_image_value = 1.f;
     bool blur_output = false;
     bool equalize_output = false;
     bool sharpen_output = false;
-    bool pad_input = false;
 
     // parse and save command line args
     int parse_result = parse_arguments(
@@ -55,13 +51,10 @@ main(int argc, const char** argv)
         &template_image_filename,
         &target_image_filename,
         &scale_image_value,
+        &quadrant_depth,
         &blur_output,
         &equalize_output,
-        &sharpen_output,
-        &region_size,
-        &ruler,
-        &connectivity,
-        &quadrant_depth
+        &sharpen_output
     );
     if ( parse_result != 1 ) return parse_result;
 
@@ -77,10 +70,6 @@ main(int argc, const char** argv)
         template_image_filename,
         target_image_filename,
         scale_image_value,
-        pad_input,
-        region_size,
-        ruler,
-        connectivity,
         quadrant_depth
     );
 
@@ -123,7 +112,6 @@ main(int argc, const char** argv)
     style_data.template_image.release();
     style_data.target_image.release();
     style_data.input_mask.release();
-    style_data.region_of_interest.release();
     style_data.marked_up_image.release();
     style_data.markers.release();
 
