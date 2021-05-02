@@ -19,4 +19,6 @@ std::vector<cv::Rect> quadrant_cut(cv::Rect src_rect);
 
 std::vector<cv::Rect> quadrant_split_recursive(cv::Rect src_rect, int depth);
 
+std::vector<cv::Mat> quadrant_selector(cv::Mat image, std::vector<cv::Rect> quadrants);
+
 #endif

@@ -6,6 +6,8 @@
 
 #include "quadrant.hpp"
 
+#include "region_of_interest.hpp"
+
 
 // swap images
 void
@@ -75,4 +77,29 @@ quadrant_split_recursive(cv::Rect src_rect, int depth)
         recursive_quads.insert( recursive_quads.begin(), q_quads.begin(), q_quads.end() );
     }
     return recursive_quads;
+}
+
+// return list of ROIs given image and rects
+std::vector<cv::Mat>
+quadrant_selector(cv::Mat image, std::vector<cv::Rect> quadrants)
+{
+    std::vector<cv::Mat> quad_rois;
+
+    // TEMPLATE
+    // loop thru each rect to create mask lookup
+    for (cv::Rect& q : quadrants) {
+        // find the mask for given quadrant
+        cv::Mat quad_roi = extract_roi_safe( image, q );
+        // add to list
+        quad_rois.push_back( quad_roi );
+
+#if DEBUG > 1
+        cv::imshow("quad_roi", quad_roi);
+        cv::waitKey(1);
+#endif
+
+        quad_roi.release();
+    }
+
+    return quad_rois;
 }

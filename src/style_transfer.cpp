@@ -8,18 +8,13 @@
 
 #include <vector>
 
-#include "affine.hpp"
 #include "cla_parse.hpp"
-#include "dir_func.hpp"
-#include "hsv_convert.hpp"
-#include "rectangle.hpp"
-#include "segmentation.hpp"
 #include "style_helper.hpp"
 
 #define DEBUG 1
 
 
-const std::string WINDOW_NAME = "SLIC Superpixels";
+const std::string WINDOW_NAME = "Style Transfer";
 
 
 // event loop

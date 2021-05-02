@@ -7,7 +7,6 @@
 #include <opencv2/ximgproc/slic.hpp>
 
 #include <iostream>
-#include <map>
 
 #include "style_helper.hpp"
 
@@ -17,7 +16,6 @@
 #include "hsv_convert.hpp"
 #include "mouse_callback.hpp"
 #include "quadrant.hpp"
-#include "segmentation.hpp"
 
 #define DEBUG 1
 
@@ -98,12 +96,7 @@ preprocess_style_data(
     target_image.copyTo( style_data.target_image );
     target_image.release();
 
-    // create mask, only distance filter on foreground
-    //TODO make this better at background detection, not just black backgrounds
-    style_data.input_mask = make_background_mask( style_data.template_image );
-
     // get the algorithm parameters
-    // image_data.algorithm = slic_string_to_int( algorithm_string );
     style_data.region_size = region_size;
     style_data.ruler = ruler;
     style_data.connectivity = connectivity;
@@ -141,49 +134,25 @@ process_style_data(StyleTransferData* style_data)
     // begin clocking mask generator
 #endif
 
-    cv::Mat previous_src_mask;
-    std::vector<cv::Mat> src_marker_masks;
-    std::vector<cv::Mat> dst_marker_masks;
-
-    // normalize markers_32S of src to dst->num_superpixels
-    cv::Mat normal_src_markers;
-    style_data->markers.copyTo( normal_src_markers );
-    // cv::normalize( src->markers, normal_src_markers, 0, dst->num_superpixels, cv::NORM_MINMAX );
-
-    //TODO mask from rects
-    // loop thru each superpixel to create mask lookup
-    for (size_t i = 0; i < style_data->num_superpixels; i++) {
-        int marker_value = static_cast<int>( i );
-        // find the mask for given superpixel
-        src_marker_masks.push_back( make_background_mask( normal_src_markers, marker_value ) );
-        dst_marker_masks.push_back( make_background_mask( style_data->markers, marker_value ) );
-
-        // if blank src mask, use previous
-        std::vector<cv::Point> nonzeropixels;
-        cv::findNonZero( src_marker_masks.at( marker_value ), nonzeropixels );
-        if (nonzeropixels.size() == 0) {
-            previous_src_mask.copyTo( src_marker_masks.at( marker_value ) );
-        } else {
-            src_marker_masks.at( marker_value ).copyTo( previous_src_mask );
-        }
-
-#if DEBUG > 1
-        cv::imshow("src_marker_mask", src_marker_mask);
-        cv::imshow("dst_marker_mask", dst_marker_mask);
-        cv::waitKey(1);
-#endif
-
-    }
-    previous_src_mask.release();
+    // TEMPLATE
+    std::vector<cv::Mat> src_quad_rois = quadrant_selector(
+        style_data->template_image,
+        style_data->template_quadrants
+    );
+    // TARGET
+    std::vector<cv::Mat> dst_quad_rois = quadrant_selector(
+        style_data->target_image,
+        style_data->target_quadrants
+    );
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Mask Generator Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "ROI Generator Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
     // begin clocking style transfer
 #endif
 
-    // split hsv into planes hue, saturation, vintensity
+    // split hsv into planes hue[0], saturation[1], vintensity[2]
     std::vector<cv::Mat> src_planes;
     cv::split( style_data->template_image, src_planes );
 
@@ -194,34 +163,35 @@ process_style_data(StyleTransferData* style_data)
     for (size_t i = 0; i < style_data->num_superpixels; i++) {
         int marker_value = static_cast<int>( i );
         // find the mask for given superpixel
-        cv::Mat src_marker_mask = src_marker_masks.at( marker_value );
-        cv::Mat dst_marker_mask = dst_marker_masks.at( marker_value );
+        cv::Mat src_quad_roi = src_quad_rois.at( marker_value );
+        cv::Mat dst_quad_roi = dst_quad_rois.at( marker_value );
 
         // average hue
-        cv::Scalar src_mean_hue = cv::mean( src_planes[0], src_marker_mask );
-        cv::Scalar dst_mean_hue = cv::mean( dst_planes[0], dst_marker_mask );
+        cv::Scalar src_mean_hue = cv::mean( src_planes[0], src_quad_roi );
+        cv::Scalar dst_mean_hue = cv::mean( dst_planes[0], dst_quad_roi );
         // avg saturation
-        cv::Scalar src_mean_sat = cv::mean( src_planes[1], src_marker_mask );
-        cv::Scalar dst_mean_sat = cv::mean( dst_planes[1], dst_marker_mask );
+        cv::Scalar src_mean_sat = cv::mean( src_planes[1], src_quad_roi );
+        cv::Scalar dst_mean_sat = cv::mean( dst_planes[1], dst_quad_roi );
         // average vintensity
-        cv::Scalar src_mean_val = cv::mean( src_planes[2], src_marker_mask );
-        cv::Scalar dst_mean_val = cv::mean( dst_planes[2], dst_marker_mask );
-        src_marker_mask.release();
+        cv::Scalar src_mean_val = cv::mean( src_planes[2], src_quad_roi );
+        cv::Scalar dst_mean_val = cv::mean( dst_planes[2], dst_quad_roi );
+        src_quad_roi.release();
 
         // copy hue and saturation from src to dst
         // dst_planes[0].setTo( src_mean_hue, dst_marker_mask );
-        dst_planes[0].setTo( (src_mean_hue.val[0] * 6 + dst_mean_hue.val[0] ) / 7, dst_marker_mask );
+        dst_planes[0].setTo( (src_mean_hue.val[0] * 6 + dst_mean_hue.val[0] ) / 7, dst_quad_roi );
         // dst_planes[1].setTo( src_mean_sat, dst_marker_mask );
-        dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_marker_mask );
+        dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_quad_roi );
         // average vintensity of both weighing dst
-        dst_planes[2].setTo( (src_mean_val.val[0] * 3 + dst_mean_val.val[0] ) / 4, dst_marker_mask );
-        dst_marker_mask.release();
+        dst_planes[2].setTo( (src_mean_val.val[0] * 3 + dst_mean_val.val[0] ) / 4, dst_quad_roi );
+        dst_quad_roi.release();
     }
-    normal_src_markers.release();
-    for (cv::Mat &img : src_marker_masks) {
+
+    // release ROIs and source planes
+    for (cv::Mat &img : src_quad_rois) {
         img.release();
     }
-    for (cv::Mat &img : dst_marker_masks) {
+    for (cv::Mat &img : dst_quad_rois) {
         img.release();
     }
     for (cv::Mat &img : src_planes) {
