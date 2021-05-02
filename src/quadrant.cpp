@@ -52,11 +52,13 @@ swap_quadrants(cv::Mat* src)
     }
 }
 
+// split rect into 4 equal size quadrants
 std::vector<cv::Rect>
 quadrant_cut(cv::Rect src_rect)
 {
     assert( !( src_rect.x & 1 || src_rect.y & 1 ) );
     assert( !( src_rect.height & 1 || src_rect.width & 1 ) );
+    //TODO this is losing input information due to the even-cutoff
 
     int c_h = src_rect.height / 2;
     int c_w = src_rect.width / 2;
@@ -69,6 +71,7 @@ quadrant_cut(cv::Rect src_rect)
     return quandrants;
 }
 
+// split a rect into 4 quadrants `depth` times
 std::vector<cv::Rect>
 quadrant_split_recursive(cv::Rect src_rect, int depth)
 {
@@ -105,7 +108,7 @@ quadrant_split_recursive(cv::Rect src_rect, int depth)
     return recursive_quads;
 }
 
-// return list of ROIs given image and rects
+// return list of ROIs given image and vector of rects
 std::vector<cv::Mat>
 quadrant_selector(cv::Mat image, std::vector<cv::Rect> quadrants)
 {

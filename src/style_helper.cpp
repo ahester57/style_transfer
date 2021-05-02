@@ -94,10 +94,7 @@ preprocess_style_data(
     target_image.copyTo( style_data.target_image );
     target_image.release();
 
-    // get the algorithm parameters
-    style_data.region_size = region_size;
-    style_data.ruler = ruler;
-    style_data.connectivity = connectivity;
+    // SET the algorithm parameters
     style_data.quadrant_depth = quadrant_depth;
 
     // TEMPLATE
@@ -112,13 +109,7 @@ preprocess_style_data(
 
 #if DEBUG
     std::cout << std::endl << "Template Quadrants:\t" << style_data.template_quadrants.size() << std::endl;
-    for ( cv::Rect& q : style_data.template_quadrants ) {
-        std::cout << q.x << ", " << q.y << ", " << q.area() << std::endl;
-    }
     std::cout << "Target Quadrants:\t" << style_data.target_quadrants.size() << std::endl;
-    for ( cv::Rect& q : style_data.target_quadrants ) {
-        std::cout << q.x << ", " << q.y << ", " << q.area() << std::endl;
-    }
 #endif
 
     return style_data;
