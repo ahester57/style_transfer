@@ -25,28 +25,54 @@ swap_quadrants(cv::Mat* src)
     // assert cols and rows are even
     assert( !( src->cols & 1 || src->rows & 1) );
 
-    std::vector<cv::Mat> q = quadrant_cut( src );
+    // cut with full quadrant
+    std::vector<cv::Rect> quadrants = quadrant_cut( cv::Rect( 0, 0, src->cols, src->rows ) );
+    std::vector<cv::Mat> mat_quads;
+
+    // get source image @ quadrants
+    for (cv::Rect& q : quadrants) {
+        mat_quads.push_back( cv::Mat( *src, q ) );
+    }
 
     // swap quandrants
-    swap_mat( &q[0], &q[3] );
-    swap_mat( &q[1], &q[2] );
+    swap_mat( &mat_quads[0], &mat_quads[3] );
+    swap_mat( &mat_quads[1], &mat_quads[2] );
 
-    for (cv::Mat &img : q) {
+    for (cv::Mat &img : mat_quads) {
         img.release();
     }
 }
 
-std::vector<cv::Mat>
-quadrant_cut(cv::Mat* src)
+std::vector<cv::Rect>
+quadrant_cut(cv::Rect src_rect)
 {
-    assert( !( src->cols & 1 || src->rows & 1) );
-    int c_x = src->cols / 2;
-    int c_y = src->rows / 2;
+    assert( !( src_rect.x & 1 || src_rect.y & 1) );
+    int c_x = src_rect.x / 2;
+    int c_y = src_rect.y / 2;
 
-    std::vector<cv::Mat> quandrants;
-    quandrants.push_back(cv::Mat( *src, cv::Rect( 0, 0, c_x, c_y ))); // top_left
-    quandrants.push_back(cv::Mat( *src, cv::Rect( c_x, 0, c_x, c_y ))); // top_right
-    quandrants.push_back(cv::Mat( *src, cv::Rect( 0, c_y, c_x, c_y ))); // bottom_left
-    quandrants.push_back(cv::Mat( *src, cv::Rect( c_x, c_y, c_x, c_y )));// bottom_right
+    std::vector<cv::Rect> quandrants;
+    quandrants.push_back( cv::Rect( 0, 0, c_x, c_y ) ); // top_left
+    quandrants.push_back( cv::Rect( c_x, 0, c_x, c_y ) ); // top_right
+    quandrants.push_back( cv::Rect( 0, c_y, c_x, c_y ) ); // bottom_left
+    quandrants.push_back( cv::Rect( c_x, c_y, c_x, c_y ) );// bottom_right
     return quandrants;
+}
+
+std::vector<cv::Rect>
+quadrant_split_recursive(cv::Rect src_rect, int depth)
+{
+    if (depth == 0) {
+        std::vector<cv::Rect> depth_limit_rect;
+        depth_limit_rect.push_back( src_rect );
+        return depth_limit_rect;
+    }
+    // compute quadrants of src_rect
+    std::vector<cv::Rect> quadrants = quadrant_cut( src_rect );
+    std::vector<cv::Rect> recursive_quads;
+    // recursively do all quadrants
+    for (cv::Rect& q : quadrants) {
+        std::vector<cv::Rect> q_quads = quadrant_split_recursive( q, depth - 1 );
+        recursive_quads.insert( recursive_quads.begin(), q_quads.begin(), q_quads.end() );
+    }
+    return recursive_quads;
 }
