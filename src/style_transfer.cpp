@@ -13,6 +13,7 @@
 #include "cla_parse.hpp"
 #include "dir_func.hpp"
 #include "hsv_convert.hpp"
+#include "quadrant.hpp"
 #include "rectangle.hpp"
 #include "segmentation.hpp"
 #include "slic_helper.hpp"
@@ -37,41 +38,20 @@ wait_key()
 }
 
 void
-transfer_style(SLICData* src, SLICData* dst)
+transfer_style(std::vector<StyleTransferData>* style_data)
 {
+    assert( style_data->size() == 2);
+
 #if DEBUG
     std::clock_t clock_begin;
     std::clock_t clock_end;
     clock_begin = std::clock();
     // begin clocking split and normalize
 #endif
-    // blur a lot
-    cv::Mat src_hsv;
-    cv::Mat dst_hsv;
-    cv::GaussianBlur( src->input_image, src_hsv, cv::Size( 3, 3 ), 0.5f );
-    cv::GaussianBlur( dst->input_image, dst_hsv, cv::Size( 3, 3 ), 0.5f );
 
-    // use hsv
-    bgr_to_hsv( src_hsv, &src_hsv );
-    bgr_to_hsv( dst_hsv, &dst_hsv );
+    StyleTransferData* src = &(*style_data)[0];
+    StyleTransferData* dst = &(*style_data)[1];
 
-    // split hsv into planes hue, saturation, vintensity
-    std::vector<cv::Mat> src_planes;
-    cv::split( src_hsv, src_planes );
-    src_hsv.release();
-
-    std::vector<cv::Mat> dst_planes;
-    cv::split( dst_hsv, dst_planes );
-    dst_hsv.release();
-
-    // normalize markers_32S of src to dst->num_superpixels
-    cv::Mat normal_src_markers;
-    src->markers.copyTo( normal_src_markers );
-    cv::normalize( src->markers, normal_src_markers, 0, dst->num_superpixels, cv::NORM_MINMAX );
-
-    // split images into equal amount of quadrants.
-    int divisions = 5;
-    
 #if DEBUG
     clock_end = std::clock();
     std::printf( "Split Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
@@ -82,6 +62,11 @@ transfer_style(SLICData* src, SLICData* dst)
     cv::Mat previous_src_mask;
     std::vector<cv::Mat> src_marker_masks;
     std::vector<cv::Mat> dst_marker_masks;
+
+    // normalize markers_32S of src to dst->num_superpixels
+    cv::Mat normal_src_markers;
+    cv::normalize( src->markers, normal_src_markers, 0, dst->num_superpixels, cv::NORM_MINMAX );
+
     // loop thru each superpixel to create mask lookup
     for (size_t i = 0; i < dst->num_superpixels; i++) {
         int marker_value = static_cast<int>( i );
@@ -103,6 +88,7 @@ transfer_style(SLICData* src, SLICData* dst)
         cv::imshow("dst_marker_mask", dst_marker_mask);
         cv::waitKey(1);
 #endif
+
     }
     previous_src_mask.release();
 
@@ -112,6 +98,24 @@ transfer_style(SLICData* src, SLICData* dst)
     clock_begin = std::clock();
     // begin clocking style transfer
 #endif
+
+
+    // blur a lot
+    cv::Mat src_hsv;
+    cv::Mat dst_hsv;
+    cv::GaussianBlur( src->template_image, src_hsv, cv::Size( 3, 3 ), 0.5f );
+    cv::GaussianBlur( dst->template_image, dst_hsv, cv::Size( 3, 3 ), 0.5f );
+
+
+    // split hsv into planes hue, saturation, vintensity
+    std::vector<cv::Mat> src_planes;
+    cv::split( src_hsv, src_planes );
+    src_hsv.release();
+
+    std::vector<cv::Mat> dst_planes;
+    cv::split( dst_hsv, dst_planes );
+    dst_hsv.release();
+
 
     // loop thru each superpixel to transfer style (mean)
     for (size_t i = 0; i < dst->num_superpixels; i++) {
@@ -174,7 +178,7 @@ transfer_style(SLICData* src, SLICData* dst)
 }
 
 
-std::vector<SLICData>
+std::vector<StyleTransferData>
 initialize_superimposed_images(
     std::string template_image_filename,
     std::string target_image_filename,
@@ -186,25 +190,50 @@ initialize_superimposed_images(
     int connectivity,
     bool blur_output,
     bool equalize_output,
-    bool sharpen_output
+    bool sharpen_output,
+    int quadrant_depth
 ) {
+#if DEBUG
+    std::clock_t clock_begin;
+    std::clock_t clock_end;
+    clock_begin = std::clock();
+    // begin clocking pre-process source
+#endif
     // open the source image with given options
-    SLICData source_data = preprocess_slic(
+    StyleTransferData source_data = preprocess_slic(
         template_image_filename,
         scale_image_value,
         pad_input,
         algorithm_string,
         region_size,
         ruler,
-        connectivity
+        connectivity,
+        quadrant_depth
     );
+        // blur a lot
+    cv::Mat src_hsv;
+    cv::GaussianBlur( source_data.template_image, src_hsv, cv::Size( 3, 3 ), 0.5f );
+
+    // use hsv
+    bgr_to_hsv( src_hsv, &src_hsv );
+
+    // split images into equal amount of quadrants.
+    cv::Rect source_rect = cv::Rect( 0, 0, source_data.template_image.cols, source_data.template_image.rows );
+    source_data.input_quadrants = quadrant_split_recursive( source_rect, source_data.quadrant_depth );
+    
+#if DEBUG
+    clock_end = std::clock();
+    std::printf( "Preprocess Template Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    clock_begin = std::clock();
+    // begin clocking preprocess dest
+#endif
 
     // apply segmentation to source
     process_slic( &source_data );
 
 
     // open the target image with given options
-    SLICData target_data = preprocess_slic(
+    StyleTransferData target_data = preprocess_slic(
         target_image_filename,
         scale_image_value,
         pad_input,
@@ -212,14 +241,36 @@ initialize_superimposed_images(
         region_size,
         ruler,
         connectivity,
-        source_data.num_superpixels
+        source_data.num_superpixels,
+        quadrant_depth
     );
+
+    // blur a lot
+    cv::Mat dst_hsv;
+    cv::GaussianBlur( target_data.template_image, dst_hsv, cv::Size( 3, 3 ), 0.5f );
+
+    // use hsv
+    bgr_to_hsv( dst_hsv, &dst_hsv );
+
+    // split images into equal amount of quadrants.
+    cv::Rect target_rect = cv::Rect( 0, 0, target_data.template_image.cols, target_data.template_image.rows );
+    target_data.input_quadrants = quadrant_split_recursive( target_rect, target_data.quadrant_depth );
+    
+#if DEBUG
+    clock_end = std::clock();
+    std::printf( "Preprocess Target Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    clock_begin = std::clock();
+    // begin clocking target process
+#endif
 
     // apply segmentation to target with same number of superpixels
     process_slic( &target_data );
 
+    // normalize markers_32S of src to dst->num_superpixels
+    cv::Mat normal_src_markers;
+    cv::normalize( source_data.markers, source_data.markers, 0, target_data.num_superpixels, cv::NORM_MINMAX );
 
-    std::vector<SLICData> data;
+    std::vector<StyleTransferData> data;
     data.push_back( source_data );
     data.push_back( target_data );
     return data;
@@ -260,7 +311,7 @@ main(int argc, const char** argv)
     );
     if (parse_result != 1) return parse_result;
 
-    std::vector<SLICData> style_data = initialize_superimposed_images(
+    std::vector<StyleTransferData> style_data = initialize_superimposed_images(
         template_image_filename,
         target_image_filename,
         scale_image_value,
@@ -271,10 +322,11 @@ main(int argc, const char** argv)
         connectivity,
         blur_output,
         equalize_output,
-        sharpen_output
+        sharpen_output,
+        1
     );
 
-    transfer_style( &style_data[0], &style_data[1] );
+    transfer_style( &style_data );
 
     // post-process target slic data
     postprocess_slic(
@@ -289,12 +341,15 @@ main(int argc, const char** argv)
 
     cv::destroyAllWindows();
 
-    for (SLICData &data : style_data) {
-        data.input_image.release();
-        data.markers.release();
+    for (StyleTransferData &data : style_data) {
+        data.template_image.release();
         data.input_mask.release();
         data.region_of_interest.release();
         data.marked_up_image.release();
+        data.markers.release();
+        // for (cv::Mat &img : data.markers) {
+        //     img.release();
+        // }
     }
 
     return 0;

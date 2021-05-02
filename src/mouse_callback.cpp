@@ -21,14 +21,14 @@
 void
 mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
 {
-    SLICData* image_data = (SLICData*) userdata;
+    StyleTransferData* image_data = (StyleTransferData*) userdata;
 
     switch (event) {
 
     // RIGHT MOUSE BUTTON
         case cv::EVENT_RBUTTONUP:
             // zero-out region of interest
-            image_data->marked_up_image = cv::Mat::zeros( image_data->input_image.size(), image_data->input_image.type() );
+            image_data->marked_up_image = cv::Mat::zeros( image_data->template_image.size(), image_data->template_image.type() );
 
             // draw original map back on
             draw_on_original( image_data );
@@ -92,13 +92,13 @@ mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata)
 
 // assign mouse callbacks
 void
-init_callback(SLICData* image_data)
+init_callback(StyleTransferData* image_data)
 {
     cv::setMouseCallback( image_data->window_name, mouse_callback_draw_zeros, image_data );
 }
 
 void
-init_callback(SLICData* image_data, std::string window_name)
+init_callback(StyleTransferData* image_data, std::string window_name)
 {
     cv::setMouseCallback( window_name, mouse_callback_draw_zeros, image_data );
 }

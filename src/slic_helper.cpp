@@ -34,7 +34,7 @@ const std::string WINDOW_NAME = "SLIC Superpixels";
 
 
 // initialize input data
-SLICData
+StyleTransferData
 preprocess_slic(
     std::string input_image_filename,
     float scale_image_value,
@@ -43,7 +43,8 @@ preprocess_slic(
     int region_size,
     float ruler,
     int connectivity,
-    int num_superpixels
+    int num_superpixels,
+    int quadrant_depth
 ) {
     cv::Mat input_image = open_image( input_image_filename );
 
@@ -79,14 +80,14 @@ preprocess_slic(
     std::string output_window_name = WINDOW_NAME + " Output Image";
 
     // initialize SLICData object
-    SLICData image_data;
+    StyleTransferData image_data;
     image_data.window_name = output_window_name;
-    input_image.copyTo( image_data.input_image );
+    input_image.copyTo( image_data.template_image );
     input_image.release();
 
     // create mask, only distance filter on foreground
     //TODO make this better at background detection, not just black backgrounds
-    image_data.input_mask = make_background_mask( image_data.input_image );
+    image_data.input_mask = make_background_mask( image_data.template_image );
 
     // get the algorithm parameters
     image_data.algorithm = slic_string_to_int( algorithm_string );
@@ -97,7 +98,7 @@ preprocess_slic(
 
     // if num_superpixels provided, set the region size accordingly
     if (image_data.num_superpixels != 0) {
-        image_data.region_size = static_cast<int>( std::sqrt( image_data.input_image.size().area() / num_superpixels ) );
+        image_data.region_size = static_cast<int>( std::sqrt( image_data.template_image.size().area() / num_superpixels ) );
     }
 
     return image_data;
@@ -105,14 +106,14 @@ preprocess_slic(
 
 // apply segmentation
 void
-process_slic(SLICData* image_data)
+process_slic(StyleTransferData* image_data)
 {
     // segment the image by intensity
     superpixel_slic( image_data );
     // convert back to RGB
-    cv::cvtColor( image_data->input_image, image_data->input_image, cv::COLOR_Lab2BGR );
+    cv::cvtColor( image_data->template_image, image_data->template_image, cv::COLOR_Lab2BGR );
     // zero-out region of interest
-    image_data->marked_up_image = cv::Mat::zeros( image_data->input_image.size(), image_data->input_image.type() );
+    image_data->marked_up_image = cv::Mat::zeros( image_data->template_image.size(), image_data->template_image.type() );
     // draw original map back on
     draw_on_original( image_data );
 }
@@ -120,7 +121,7 @@ process_slic(SLICData* image_data)
 // apply input filters, show, save, and initialize mouse callback
 void
 postprocess_slic(
-    SLICData* image_data,
+    StyleTransferData* image_data,
     bool blur_output,
     bool equalize_output,
     bool sharpen_output
@@ -160,7 +161,7 @@ postprocess_slic(
 
 // segment images into markers and contours using SLIC algorithms
 void
-superpixel_slic(SLICData* image_data)
+superpixel_slic(StyleTransferData* image_data)
 {
 #if DEBUG
     std::clock_t clock_begin, clock_end;
@@ -169,7 +170,7 @@ superpixel_slic(SLICData* image_data)
 
     cv::Ptr<cv::ximgproc::SuperpixelSLIC> superpixels;
     superpixels = cv::ximgproc::createSuperpixelSLIC(
-        image_data->input_image,
+        image_data->template_image,
         image_data->algorithm,
         image_data->region_size,
         image_data->ruler
@@ -215,7 +216,7 @@ superpixel_slic(SLICData* image_data)
 #endif
 
 #if DEBUG
-    std::cout << std::endl << "num_pixels:\t" << image_data->input_image.size().area() << std::endl;
+    std::cout << std::endl << "num_pixels:\t" << image_data->template_image.size().area() << std::endl;
     std::cout << "num_superpixels:\t" << image_data->num_superpixels << std::endl;
     std::cout << "region_size:\t" << image_data->region_size << std::endl << std::endl;
 #endif
@@ -240,11 +241,11 @@ slic_string_to_int(std::string algorithm_string)
 
 // select a region. called from mouse listener
 void
-select_region(SLICData* image_data, int marker_value)
+select_region(StyleTransferData* image_data, int marker_value)
 {
 
     // zero-out region of interest
-    image_data->marked_up_image = cv::Mat::zeros( image_data->input_image.size(), image_data->input_image.type() );
+    image_data->marked_up_image = cv::Mat::zeros( image_data->template_image.size(), image_data->template_image.type() );
 
     // draw original map back on
     draw_on_original( image_data, marker_value );
@@ -272,7 +273,7 @@ select_region(SLICData* image_data, int marker_value)
 
 // paint real map atop the region of interest's mask
 cv::Mat
-paint_map_atop_region(SLICData* image_data, int marker_value, cv::Mat drawn_contour)
+paint_map_atop_region(StyleTransferData* image_data, int marker_value, cv::Mat drawn_contour)
 {
     // create single channel mask
     cv::Mat map_mask_8u;
@@ -287,7 +288,7 @@ paint_map_atop_region(SLICData* image_data, int marker_value, cv::Mat drawn_cont
     cv::Mat painted_region;
     try {
         painted_region = bitwise_i1_atop_i2(
-            image_data->input_image,
+            image_data->template_image,
             contour_8u3,
             map_mask_8u,
             drawn_contour
@@ -304,7 +305,7 @@ paint_map_atop_region(SLICData* image_data, int marker_value, cv::Mat drawn_cont
     }
 
     if (painted_region.empty()) {
-        image_data->input_image.copyTo( painted_region );
+        image_data->template_image.copyTo( painted_region );
     }
 
     map_mask_8u.release();
@@ -314,7 +315,7 @@ paint_map_atop_region(SLICData* image_data, int marker_value, cv::Mat drawn_cont
 
 // draw original states back onto marked_up_image
 void
-draw_on_original(SLICData* image_data, int marker_value)
+draw_on_original(StyleTransferData* image_data, int marker_value)
 {
     // create single channel mask
     cv::Mat mask_8u;
@@ -334,7 +335,7 @@ draw_on_original(SLICData* image_data, int marker_value)
                 continue;
             }
             if (pixel >= 0 && pixel <= static_cast<int>(image_data->num_superpixels)) {
-                image_data->marked_up_image.at<cv::Vec3b>( i, j ) = image_data->input_image.at<cv::Vec3b>( i, j );
+                image_data->marked_up_image.at<cv::Vec3b>( i, j ) = image_data->template_image.at<cv::Vec3b>( i, j );
             }
         }
     }
