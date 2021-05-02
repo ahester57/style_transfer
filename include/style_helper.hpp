@@ -46,6 +46,8 @@ StyleTransferData preprocess_style_data(
     int quadrant_depth = 0
 );
 
+void process_style_data(StyleTransferData* style_data);
+
 void postprocess_style_data(
     StyleTransferData* style_data,
     bool blur_output,

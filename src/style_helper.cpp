@@ -14,6 +14,7 @@
 #include "affine.hpp"
 #include "dir_func.hpp"
 #include "equalize.hpp"
+#include "hsv_convert.hpp"
 #include "mouse_callback.hpp"
 #include "quadrant.hpp"
 #include "segmentation.hpp"
@@ -50,25 +51,34 @@ preprocess_style_data(
     // scale the input size if given 's' flag
     if (scale_image_value != 1.f) {
         template_image = resize_affine( template_image, scale_image_value );
+        target_image = resize_affine( target_image, scale_image_value );
     }
 
     // crop if odd resolution
     template_image = template_image(
         cv::Rect( 0, 0, template_image.cols & -2, template_image.rows & -2 )
     );
-    std::cout << "Scaled Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
+    std::cout << "Scaled Template Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
+    target_image = target_image(
+        cv::Rect( 0, 0, target_image.cols & -2, target_image.rows & -2 )
+    );
+    std::cout << "Scaled Target Image size is:\t\t" << target_image.cols << "x" << target_image.rows << std::endl;
 
     // pad the input image if given flag
     if (pad_input) {
         cv::copyMakeBorder( template_image, template_image, 50, 50, 50, 50, cv::BORDER_CONSTANT, cv::Scalar(0) );
-        std::cout << "Padded Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
+        std::cout << "Padded Template Image size is:\t\t" << template_image.cols << "x" << template_image.rows << std::endl;
+        cv::copyMakeBorder( target_image, target_image, 50, 50, 50, 50, cv::BORDER_CONSTANT, cv::Scalar(0) );
+        std::cout << "Padded Target Image size is:\t\t" << target_image.cols << "x" << target_image.rows << std::endl;
     }
 
     // blur
     cv::GaussianBlur( template_image, template_image, cv::Size( 3, 3 ), 0.5f );
+    cv::GaussianBlur( target_image, target_image, cv::Size( 3, 3 ), 0.5f );
 
-    // convert to CieLAB
-    cv::cvtColor( template_image, template_image, cv::COLOR_BGR2HSV );
+    // convert to HSV
+    bgr_to_hsv( template_image, &template_image );
+    bgr_to_hsv( target_image, &target_image );
 
 #if DEBUG > 1
     cv::imshow( WINDOW_NAME, input_image );
@@ -81,8 +91,12 @@ preprocess_style_data(
     // initialize StyleTransferData object
     StyleTransferData style_data;
     style_data.window_name = output_window_name;
+
+    // copy input images
     template_image.copyTo( style_data.template_image );
     template_image.release();
+    target_image.copyTo( style_data.target_image );
+    target_image.release();
 
     // create mask, only distance filter on foreground
     //TODO make this better at background detection, not just black backgrounds
@@ -100,8 +114,141 @@ preprocess_style_data(
         style_data.region_size = static_cast<int>( std::sqrt( style_data.template_image.size().area() / num_superpixels ) );
     }
 
+    // TEMPLATE
+    // split images into equal amount of quadrants.
+    cv::Rect template_rect = cv::Rect( 0, 0, style_data.template_image.cols, style_data.template_image.rows );
+    style_data.template_quadrants = quadrant_split_recursive( template_rect, quadrant_depth );
+
+    // TARGET
+    // split images into equal amount of quadrants.
+    cv::Rect target_rect = cv::Rect( 0, 0, style_data.target_image.cols, style_data.target_image.rows );
+    style_data.target_quadrants = quadrant_split_recursive( target_rect, quadrant_depth );
+
     return style_data;
 }
+
+
+void
+process_style_data(StyleTransferData* style_data)
+{
+    assert( style_data != NULL);
+    assert( !style_data->template_image.empty() && !style_data->target_image.empty() );
+
+#if DEBUG
+    std::clock_t clock_begin;
+    std::clock_t clock_end;
+    clock_begin = std::clock();
+    // begin clocking mask generator
+#endif
+
+    cv::Mat previous_src_mask;
+    std::vector<cv::Mat> src_marker_masks;
+    std::vector<cv::Mat> dst_marker_masks;
+
+    // normalize markers_32S of src to dst->num_superpixels
+    cv::Mat normal_src_markers;
+    style_data->markers.copyTo( normal_src_markers );
+    // cv::normalize( src->markers, normal_src_markers, 0, dst->num_superpixels, cv::NORM_MINMAX );
+
+    //TODO mask from rects
+    // loop thru each superpixel to create mask lookup
+    for (size_t i = 0; i < style_data->num_superpixels; i++) {
+        int marker_value = static_cast<int>( i );
+        // find the mask for given superpixel
+        src_marker_masks.push_back( make_background_mask( normal_src_markers, marker_value ) );
+        dst_marker_masks.push_back( make_background_mask( style_data->markers, marker_value ) );
+
+        // if blank src mask, use previous
+        std::vector<cv::Point> nonzeropixels;
+        cv::findNonZero( src_marker_masks.at( marker_value ), nonzeropixels );
+        if (nonzeropixels.size() == 0) {
+            previous_src_mask.copyTo( src_marker_masks.at( marker_value ) );
+        } else {
+            src_marker_masks.at( marker_value ).copyTo( previous_src_mask );
+        }
+
+#if DEBUG > 1
+        cv::imshow("src_marker_mask", src_marker_mask);
+        cv::imshow("dst_marker_mask", dst_marker_mask);
+        cv::waitKey(1);
+#endif
+
+    }
+    previous_src_mask.release();
+
+#if DEBUG
+    clock_end = std::clock();
+    std::printf( "Mask Generator Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    clock_begin = std::clock();
+    // begin clocking style transfer
+#endif
+
+    // split hsv into planes hue, saturation, vintensity
+    std::vector<cv::Mat> src_planes;
+    cv::split( style_data->template_image, src_planes );
+
+    std::vector<cv::Mat> dst_planes;
+    cv::split( style_data->target_image, dst_planes );
+
+    // loop thru each superpixel to transfer style (mean)
+    for (size_t i = 0; i < style_data->num_superpixels; i++) {
+        int marker_value = static_cast<int>( i );
+        // find the mask for given superpixel
+        cv::Mat src_marker_mask = src_marker_masks.at( marker_value );
+        cv::Mat dst_marker_mask = dst_marker_masks.at( marker_value );
+
+        // average hue
+        cv::Scalar src_mean_hue = cv::mean( src_planes[0], src_marker_mask );
+        cv::Scalar dst_mean_hue = cv::mean( dst_planes[0], dst_marker_mask );
+        // avg saturation
+        cv::Scalar src_mean_sat = cv::mean( src_planes[1], src_marker_mask );
+        cv::Scalar dst_mean_sat = cv::mean( dst_planes[1], dst_marker_mask );
+        // average vintensity
+        cv::Scalar src_mean_val = cv::mean( src_planes[2], src_marker_mask );
+        cv::Scalar dst_mean_val = cv::mean( dst_planes[2], dst_marker_mask );
+        src_marker_mask.release();
+
+        // copy hue and saturation from src to dst
+        // dst_planes[0].setTo( src_mean_hue, dst_marker_mask );
+        dst_planes[0].setTo( (src_mean_hue.val[0] * 6 + dst_mean_hue.val[0] ) / 7, dst_marker_mask );
+        // dst_planes[1].setTo( src_mean_sat, dst_marker_mask );
+        dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_marker_mask );
+        // average vintensity of both weighing dst
+        dst_planes[2].setTo( (src_mean_val.val[0] * 3 + dst_mean_val.val[0] ) / 4, dst_marker_mask );
+        dst_marker_mask.release();
+    }
+    normal_src_markers.release();
+    for (cv::Mat &img : src_marker_masks) {
+        img.release();
+    }
+    for (cv::Mat &img : dst_marker_masks) {
+        img.release();
+    }
+    for (cv::Mat &img : src_planes) {
+        img.release();
+    }
+
+#if DEBUG
+    clock_end = std::clock();
+    std::printf( "Transfer Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    clock_begin = std::clock();
+#endif
+
+    // merge dst_planes back to hsv image
+    cv::merge( dst_planes, style_data->marked_up_image );
+    for (cv::Mat &img : dst_planes) {
+        img.release();
+    }
+
+    // and convert to bgr
+    hsv_to_bgr( style_data->marked_up_image, &style_data->marked_up_image );
+
+#if DEBUG
+    clock_end = std::clock();
+    std::printf( "Merge Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+#endif
+}
+
 
 // apply output filters, show, save, and initialize mouse callback
 void
