@@ -111,6 +111,8 @@ process_style_data(StyleTransferData* style_data)
     assert( style_data->template_quadrants.size() > 0 );
     assert( style_data->template_quadrants.size() == style_data->target_quadrants.size() );
 
+    //TODO register template to target
+
 #if DEBUG
     std::clock_t clock_begin;
     std::clock_t clock_end;
@@ -157,6 +159,7 @@ process_style_data(StyleTransferData* style_data)
     }
 #endif
 
+        // we resize each quadrant, as not to warp the template image out of affine warp_matrix
         // hue [0]
         cv::Mat src_hue = extract_roi_safe( src_planes.at( 0 ), src_rect );
         cv::Mat dst_hue = extract_roi_safe( dst_planes.at( 0 ), dst_rect );
