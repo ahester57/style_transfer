@@ -57,18 +57,14 @@ swap_quadrants(cv::Mat* src)
 std::vector<cv::Rect>
 quadrant_cut(cv::Rect src_rect)
 {
-    assert( !( src_rect.x & 1 || src_rect.y & 1 ) );
-    assert( !( src_rect.height & 1 || src_rect.width & 1 ) );
-    //TODO this is losing input information due to the even-cutoff
-
     int c_h = src_rect.height / 2;
     int c_w = src_rect.width / 2;
 
     std::vector<cv::Rect> quandrants;
-    quandrants.push_back( cv::Rect( src_rect.x & -2, src_rect.y & -2                , c_h & -2, c_w & -2 ) ); // top_left
-    quandrants.push_back( cv::Rect( src_rect.x & -2, (src_rect.y + c_w) & -2        , c_h & -2, c_w & -2 ) ); // top_right
-    quandrants.push_back( cv::Rect( (src_rect.x + c_h) & -2, src_rect.y & -2        , c_h & -2, c_w & -2 ) ); // bottom_left
-    quandrants.push_back( cv::Rect( (src_rect.x + c_h) & -2, (src_rect.y + c_w) & -2, c_h & -2, c_w & -2 ) ); // bottom_right
+    quandrants.push_back( cv::Rect( src_rect.x, src_rect.y                  , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // top_left
+    quandrants.push_back( cv::Rect( src_rect.x, (src_rect.y + c_w)          , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // top_right
+    quandrants.push_back( cv::Rect( (src_rect.x + c_h), src_rect.y          , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // bottom_left
+    quandrants.push_back( cv::Rect( (src_rect.x + c_h), (src_rect.y + c_w)  , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // bottom_right
     return quandrants;
 }
 

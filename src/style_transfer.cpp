@@ -45,6 +45,13 @@ main(int argc, const char** argv)
     bool equalize_output = false;
     bool sharpen_output = false;
 
+#if DEBUG
+    std::clock_t clock_begin;
+    std::clock_t clock_end;
+    clock_begin = std::clock();
+    // begin clocking pre-process source
+#endif
+
     // parse and save command line args
     int parse_result = parse_arguments(
         argc, argv,
@@ -58,13 +65,6 @@ main(int argc, const char** argv)
     );
     if ( parse_result != 1 ) return parse_result;
 
-#if DEBUG
-    std::clock_t clock_begin;
-    std::clock_t clock_end;
-    clock_begin = std::clock();
-    // begin clocking pre-process source
-#endif
-
     // setup images, quadrants, etc.
     StyleTransferData style_data = preprocess_style_data(
         template_image_filename,
@@ -75,7 +75,7 @@ main(int argc, const char** argv)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Pre-Process Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "\nPre-Process Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
     // begin clocking process
 #endif
@@ -85,7 +85,7 @@ main(int argc, const char** argv)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Process Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "\nProcess Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
     // begin clocking post-process
 #endif
@@ -101,7 +101,7 @@ main(int argc, const char** argv)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Post-Process Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "\nPost-Process Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
 #endif
 

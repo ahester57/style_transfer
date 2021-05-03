@@ -176,7 +176,7 @@ process_style_data(StyleTransferData* style_data)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Style Transfer Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "\nStyle Transfer Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
 #endif
 
@@ -191,7 +191,7 @@ process_style_data(StyleTransferData* style_data)
 
 #if DEBUG
     clock_end = std::clock();
-    std::printf( "Merge Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+    std::printf( "\nMerge Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
 #endif
 }
 
