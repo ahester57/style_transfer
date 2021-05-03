@@ -19,6 +19,8 @@ std::vector<cv::Rect> quadrant_cut(cv::Rect src_rect);
 
 std::vector<cv::Rect> quadrant_split_recursive(cv::Rect src_rect, int depth = 1);
 
-std::vector<cv::Mat> quadrant_selector(cv::Mat image, std::vector<cv::Rect> quadrants);
+cv::Mat quadrant_mask_generator(cv::Mat image, cv::Rect quadrant);
+
+void mask_quadrant(cv::Mat* mask, cv::Rect quadrant);
 
 #endif

@@ -17,7 +17,7 @@
 #include "mouse_callback.hpp"
 #include "quadrant.hpp"
 
-#define DEBUG 2
+#define DEBUG 1
 
 #if DEBUG
     #include <opencv2/highgui/highgui.hpp>
@@ -78,8 +78,8 @@ preprocess_style_data(
 
     // copy input images
     template_image.copyTo( style_data.template_image );
-    template_image.release();
     target_image.copyTo( style_data.target_image );
+    template_image.release();
     target_image.release();
 
     // SET the algorithm parameters
@@ -87,12 +87,12 @@ preprocess_style_data(
 
     // TEMPLATE
     // split images into equal amount of quadrants.
-    cv::Rect template_rect = cv::Rect( 0, 0, style_data.template_image.cols, style_data.template_image.rows );
+    cv::Rect template_rect = cv::Rect( {}, style_data.template_image.size() );
     style_data.template_quadrants = quadrant_split_recursive( template_rect, quadrant_depth );
 
     // TARGET
     // split images into equal amount of quadrants.
-    cv::Rect target_rect = cv::Rect( 0, 0, style_data.target_image.cols, style_data.target_image.rows );
+    cv::Rect target_rect = cv::Rect( {}, style_data.target_image.size() );
     style_data.target_quadrants = quadrant_split_recursive( target_rect, quadrant_depth );
 
 #if DEBUG
@@ -108,37 +108,14 @@ void
 process_style_data(StyleTransferData* style_data)
 {
     assert( style_data != NULL);
-    assert( !style_data->template_image.empty() && !style_data->target_image.empty() );
+    assert( !style_data->template_image.empty() );
+    assert( !style_data->target_image.empty() );
+    assert( style_data->template_quadrants.size() > 0 );
+    assert( style_data->target_quadrants.size() > 0 );
 
 #if DEBUG
     std::clock_t clock_begin;
     std::clock_t clock_end;
-    clock_begin = std::clock();
-    std::cout << std::endl << "Begin ROI Generator" << std::endl;
-#endif
-
-    // TEMPLATE
-    std::vector<cv::Mat> src_quad_rois = quadrant_selector(
-        style_data->template_image,
-        style_data->template_quadrants
-    );
-    // TARGET
-    std::vector<cv::Mat> dst_quad_rois = quadrant_selector(
-        style_data->target_image,
-        style_data->target_quadrants
-    );
-
-#if DEBUG > 1
-    for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
-        cv::imshow("src_quad_roi", src_quad_rois[i]);
-        cv::imshow("dst_quad_roi", dst_quad_rois[i]);
-        cv::waitKey(100);
-    }
-#endif
-
-#if DEBUG
-    clock_end = std::clock();
-    std::printf( "ROI Generator Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
     clock_begin = std::clock();
     std::cout << std::endl << "Begin Style Transfer" << std::endl;
 #endif
@@ -154,18 +131,32 @@ process_style_data(StyleTransferData* style_data)
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
 
         // find the mask for given superpixel
-        cv::Mat src_quad_roi = src_quad_rois.at( i );
-        cv::Mat dst_quad_roi = dst_quad_rois.at( i );
+        cv::Mat src_quad_roi = quadrant_mask_generator(
+            style_data->template_image,
+            style_data->template_quadrants.at( i )
+        );
+        cv::Mat dst_quad_roi = quadrant_mask_generator(
+            style_data->target_image,
+            style_data->target_quadrants.at( i )
+        );
+
+#if DEBUG > 1
+    for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
+        cv::imshow("src_quad_roi", src_quad_rois[i]);
+        cv::imshow("dst_quad_roi", dst_quad_rois[i]);
+        cv::waitKey(100);
+    }
+#endif
 
         // average hue
-        cv::Scalar src_mean_hue = cv::mean( src_planes[0], src_quad_roi );
-        cv::Scalar dst_mean_hue = cv::mean( dst_planes[0], dst_quad_roi );
+        cv::Scalar src_mean_hue = cv::mean( src_planes.at( 0 ), src_quad_roi );
+        cv::Scalar dst_mean_hue = cv::mean( dst_planes.at( 0 ), dst_quad_roi );
         // avg saturation
-        cv::Scalar src_mean_sat = cv::mean( src_planes[1], src_quad_roi );
-        cv::Scalar dst_mean_sat = cv::mean( dst_planes[1], dst_quad_roi );
+        cv::Scalar src_mean_sat = cv::mean( src_planes.at( 1 ), src_quad_roi );
+        cv::Scalar dst_mean_sat = cv::mean( dst_planes.at( 1 ), dst_quad_roi );
         // average vintensity
-        cv::Scalar src_mean_val = cv::mean( src_planes[2], src_quad_roi );
-        cv::Scalar dst_mean_val = cv::mean( dst_planes[2], dst_quad_roi );
+        cv::Scalar src_mean_val = cv::mean( src_planes.at( 2 ), src_quad_roi );
+        cv::Scalar dst_mean_val = cv::mean( dst_planes.at( 2 ), dst_quad_roi );
         src_quad_roi.release();
 
         // copy hue and saturation from src to dst
@@ -178,13 +169,7 @@ process_style_data(StyleTransferData* style_data)
         dst_quad_roi.release();
     }
 
-    // release ROIs and source planes
-    for ( cv::Mat &img : src_quad_rois ) {
-        img.release();
-    }
-    for ( cv::Mat &img : dst_quad_rois ) {
-        img.release();
-    }
+    // release source planes
     for ( cv::Mat &img : src_planes ) {
         img.release();
     }

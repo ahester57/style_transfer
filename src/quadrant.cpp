@@ -3,6 +3,7 @@
 // g++.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 8.1.0
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "quadrant.hpp"
 
@@ -108,26 +109,24 @@ quadrant_split_recursive(cv::Rect src_rect, int depth)
     return recursive_quads;
 }
 
-// return list of ROIs given image and vector of rects
-std::vector<cv::Mat>
-quadrant_selector(cv::Mat image, std::vector<cv::Rect> quadrants)
+cv::Mat
+quadrant_mask_generator(cv::Mat image, cv::Rect quadrant)
 {
-    std::vector<cv::Mat> quad_rois;
-
-    // loop thru each rect to ROI of rects
-    for ( cv::Rect& q : quadrants ) {
-        // find the mask for given quadrant
-        cv::Mat quad_roi = extract_roi_safe( image, q );
-        // add to list
-        quad_rois.push_back( quad_roi );
+    // find the mask for given quadrant
+    cv::Mat quad_roi = cv::Mat::zeros( image.size(), CV_8U );
+    mask_quadrant( &quad_roi, quadrant );
 
 #if DEBUG > 1
         cv::imshow("quad_roi", quad_roi);
         cv::waitKey(1);
 #endif
 
-        quad_roi.release();
-    }
+    return quad_roi;
+}
 
-    return quad_rois;
+void
+mask_quadrant(cv::Mat* mask, cv::Rect quadrant)
+{
+    cv::Rect safe_q = extract_roi_rect_safe( *mask, quadrant );
+    (*mask)( safe_q ) = cv::Scalar( 255 );
 }

@@ -8,6 +8,8 @@
 #include <opencv2/core/core.hpp>
 
 
+cv::Rect extract_roi_rect_safe(cv::Mat image, cv::Rect rect);
+
 cv::Mat extract_roi_safe(cv::Mat image, cv::Rect rect);
 
 #endif
