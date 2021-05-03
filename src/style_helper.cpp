@@ -4,6 +4,7 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/video/tracking.hpp>
 
 #include <iostream>
 
@@ -102,6 +103,64 @@ preprocess_style_data(
 }
 
 
+cv::Mat
+register_images(cv::Mat tmplate, cv::Mat target)
+{
+#if DEBUG
+    std::clock_t clock_begin;
+    std::clock_t clock_end;
+    std::printf( "\nBegin Image Registration\n" );
+    clock_begin = std::clock();
+#endif
+
+    int motion_type = cv::MOTION_EUCLIDEAN;
+    float epsilon = 0.0000001;
+
+    cv::Size warp_matrix_size = cv::Size( 3, motion_type != cv::MOTION_HOMOGRAPHY ? 2 : 3 );
+    // create warp matrix
+    cv::Mat warp_matrix = cv::Mat::eye( warp_matrix_size, CV_32F );;
+
+    cv::Mat equalized_tmplate;
+    // convert input image to grayscale
+    cv::cvtColor( tmplate, equalized_tmplate, cv::COLOR_HSV2BGR );
+
+    cv::cvtColor( target, target, cv::COLOR_HSV2BGR );
+    cv::cvtColor( equalized_tmplate, equalized_tmplate, cv::COLOR_BGR2GRAY );
+    cv::cvtColor( target, target, cv::COLOR_BGR2GRAY );
+    // equalize grayscale input image
+    cv::equalizeHist( equalized_tmplate, equalized_tmplate );
+    cv::equalizeHist( target, target );
+
+   double correlation_co
+        = cv::findTransformECC(
+            target,
+            equalized_tmplate,
+            warp_matrix,
+            motion_type,
+            cv::TermCriteria(
+                cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
+                warp_matrix.size().area(),
+                epsilon
+            )
+        );
+
+    // warp original image using transformed warp matrix
+    motion_type != cv::MOTION_HOMOGRAPHY ?
+        cv::warpAffine(      tmplate, tmplate, warp_matrix, tmplate.size() ) :
+        cv::warpPerspective( tmplate, tmplate, warp_matrix, tmplate.size() );
+
+    equalized_tmplate.release();
+    warp_matrix.release();
+
+#if DEBUG
+    clock_end = std::clock();
+    std::printf( "\nRegistration Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
+#endif
+
+    return tmplate;
+}
+
+
 void
 process_style_data(StyleTransferData* style_data)
 {
@@ -111,18 +170,22 @@ process_style_data(StyleTransferData* style_data)
     assert( style_data->template_quadrants.size() > 0 );
     assert( style_data->template_quadrants.size() == style_data->target_quadrants.size() );
 
-    //TODO register template to target
+    // register template to target
+    cv::Mat registered_template = register_images( style_data->template_image, style_data->target_image );
 
 #if DEBUG
+    cv::imshow( "Registered Template", registered_template );
+    cv::waitKey( 0 );
     std::clock_t clock_begin;
     std::clock_t clock_end;
+    std::printf( "\nBegin Style Transfer\n" );
     clock_begin = std::clock();
-    std::cout << std::endl << "Begin Style Transfer" << std::endl;
 #endif
 
     // split hsv into planes hue[0], saturation[1], vintensity[2]
     std::vector<cv::Mat> src_planes;
-    cv::split( style_data->template_image, src_planes );
+    cv::split( registered_template, src_planes );
+    registered_template.release();
 
     std::vector<cv::Mat> dst_planes;
     cv::split( style_data->target_image, dst_planes );
@@ -136,7 +199,7 @@ process_style_data(StyleTransferData* style_data)
     // TODO move weights to input
     float w_hue = 0.8;
     float w_sat = 0.9;
-    float w_val = 0.02;
+    float w_val = 0.08;
 
     // loop thru each superpixel to transfer style (mean)
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
