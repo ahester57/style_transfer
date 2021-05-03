@@ -40,6 +40,7 @@ void process_style_data(StyleTransferData* style_data);
 
 void postprocess_style_data(
     StyleTransferData* style_data,
+    std::string out_dir,
     bool blur_output,
     bool equalize_output,
     bool sharpen_output

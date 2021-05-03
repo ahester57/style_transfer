@@ -200,6 +200,7 @@ process_style_data(StyleTransferData* style_data)
 void
 postprocess_style_data(
     StyleTransferData* style_data,
+    std::string out_dir,
     bool blur_output,
     bool equalize_output,
     bool sharpen_output
@@ -229,7 +230,7 @@ postprocess_style_data(
         style_data->quadrant_depth
     );
     cv::imshow( style_data->window_name, style_data->marked_up_image );
-    write_img_to_file( style_data->marked_up_image, "./out/style_output", metadata );
+    write_img_to_file( style_data->marked_up_image, "./out/style_output/" + out_dir, metadata );
 
     // initialize the mouse callback
     init_callback( style_data );

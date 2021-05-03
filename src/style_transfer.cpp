@@ -93,6 +93,7 @@ main(int argc, const char** argv)
     // post-process (display) style data
     postprocess_style_data(
         &style_data,
+        "TODO",//TODO combine image names without / or .
         blur_output,
         equalize_output,
         sharpen_output
