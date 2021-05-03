@@ -101,14 +101,7 @@ quadrant_cut(cv::Rect src_rect)
 
 // split an image into 4 quadrants `depth` times
 std::vector<cv::Rect>
-quadrant_split_recursive(cv::Mat image, int depth)
-{
-    return quadrant_split_recursive( image, cv::Rect( {}, image.size() ), depth );
-}
-
-// split an image into 4 quadrants `depth` times
-std::vector<cv::Rect>
-quadrant_split_recursive(cv::Mat image, cv::Rect src_rect, int depth)
+quadrant_split_recursive_private(cv::Mat* image, cv::Rect src_rect, int depth)
 {
 #if DEBUG
         std::cout << "depth: " << depth << std::endl;
@@ -117,7 +110,7 @@ quadrant_split_recursive(cv::Mat image, cv::Rect src_rect, int depth)
         // return given rect when depth limit hit
         std::vector<cv::Rect> depth_limit_rect;
         depth_limit_rect.push_back(
-            extract_roi_rect_safe( image, src_rect )
+            extract_roi_rect_safe( *image, src_rect )
         );
 #if DEBUG
         std::cout << "depth limit hit" << std::endl;
@@ -131,7 +124,7 @@ quadrant_split_recursive(cv::Mat image, cv::Rect src_rect, int depth)
     std::vector<cv::Rect> recursive_quads;
     // recursively do all quadrants
     for ( cv::Rect& q : quadrants ) {
-        std::vector<cv::Rect> q_quads = quadrant_split_recursive( image, q, depth - 1 );
+        std::vector<cv::Rect> q_quads = quadrant_split_recursive_private( image, q, depth - 1 );
         recursive_quads.insert( recursive_quads.end(), q_quads.begin(), q_quads.end() );
     }
 
@@ -143,6 +136,23 @@ quadrant_split_recursive(cv::Mat image, cv::Rect src_rect, int depth)
 #endif
 
     return recursive_quads;
+}
+
+// split an image into 4 quadrants `depth` times
+std::vector<cv::Rect>
+quadrant_split_recursive(cv::Mat image, int depth)
+{
+    return quadrant_split_recursive_private( &image, cv::Rect( {}, image.size() ), depth );
+}
+
+// split an image into 4 quadrants `depth` times
+std::vector<cv::Rect>
+quadrant_split_recursive(cv::Rect src_rect, int depth)
+{
+    cv::Mat image = cv::Mat::ones( src_rect.size(), CV_8U );
+    std::vector<cv::Rect> quadrants = quadrant_split_recursive_private( &image, src_rect, depth );
+    image.release();
+    return quadrants;
 }
 
 cv::Mat
