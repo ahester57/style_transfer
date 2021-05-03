@@ -146,14 +146,14 @@ process_style_data(StyleTransferData* style_data)
         }
 
         // find the mask for given quadrant
-        cv::Mat src_quad_roi = quadrant_mask_generator(
-            style_data->template_image,
-            src_rect
-        );
-        cv::Mat dst_quad_roi = quadrant_mask_generator(
-            style_data->target_image,
-            dst_rect
-        );
+        // cv::Mat src_quad_roi = quadrant_mask_generator(
+        //     style_data->template_image,
+        //     src_rect
+        // );
+        // cv::Mat dst_quad_roi = quadrant_mask_generator(
+        //     style_data->target_image,
+        //     dst_rect
+        // );
 
 #if DEBUG > 1
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
@@ -174,7 +174,7 @@ process_style_data(StyleTransferData* style_data)
         // vintensity [2]
         cv::Mat src_val = extract_roi_safe( src_planes.at( 2 ), src_rect );
         cv::Mat dst_val = extract_roi_safe( dst_planes.at( 2 ), dst_rect );
-        src_quad_roi.release();
+        // src_quad_roi.release();
 
         // // copy hue and saturation from src to dst
         dst_hue.copyTo( output_planes.at( 0 )( dst_rect ) );
@@ -184,7 +184,7 @@ process_style_data(StyleTransferData* style_data)
         // dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_quad_roi );
         // // average vintensity of both weighing dst
         // dst_planes[2].setTo( (src_mean_val.val[0] + dst_mean_val.val[0] * 3 ) / 4, dst_quad_roi );
-        dst_quad_roi.release();
+        // dst_quad_roi.release();
         src_hue.release();
         dst_hue.release();
         src_sat.release();
