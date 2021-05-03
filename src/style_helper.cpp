@@ -4,7 +4,6 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/ximgproc/slic.hpp>
 
 #include <iostream>
 
@@ -126,14 +125,16 @@ process_style_data(StyleTransferData* style_data)
     std::vector<cv::Mat> dst_planes;
     cv::split( style_data->target_image, dst_planes );
 
+    // initialize 'canvas'
+    cv::Mat output_tmp = cv::Mat::zeros( style_data->target_image.size(), style_data->target_image.type() );
     std::vector<cv::Mat> output_planes;
-    cv::split(
-        cv::Mat::zeros(
-            style_data->target_image.size(),
-            style_data->target_image.type()
-        ),
-        output_planes
-    );
+    cv::split( output_tmp, output_planes );
+    output_tmp.release();
+
+    // TODO move weights to input
+    float w_hue = 0.8;
+    float w_sat = 0.9;
+    float w_val = 0.02;
 
     // loop thru each superpixel to transfer style (mean)
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
@@ -141,19 +142,12 @@ process_style_data(StyleTransferData* style_data)
         cv::Rect src_rect = style_data->template_quadrants.at( i );
         cv::Rect dst_rect = style_data->target_quadrants.at( i );
 
+        if ( src_rect.area() == 0 ) {
+            continue;
+        }
         if ( dst_rect.area() == 0 ) {
             continue;
         }
-
-        // find the mask for given quadrant
-        // cv::Mat src_quad_roi = quadrant_mask_generator(
-        //     style_data->template_image,
-        //     src_rect
-        // );
-        // cv::Mat dst_quad_roi = quadrant_mask_generator(
-        //     style_data->target_image,
-        //     dst_rect
-        // );
 
 #if DEBUG > 1
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
@@ -164,32 +158,42 @@ process_style_data(StyleTransferData* style_data)
 #endif
 
         // hue [0]
-        cv::Mat hue;
         cv::Mat src_hue = extract_roi_safe( src_planes.at( 0 ), src_rect );
         cv::Mat dst_hue = extract_roi_safe( dst_planes.at( 0 ), dst_rect );
-        // src_hue.reshape( 1, src_hue.rows * src_hue.cols );
+        cv::resize( src_hue, src_hue, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
+
         // saturation [1]
         cv::Mat src_sat = extract_roi_safe( src_planes.at( 1 ), src_rect );
         cv::Mat dst_sat = extract_roi_safe( dst_planes.at( 1 ), dst_rect );
+        cv::resize( src_sat, src_sat, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
+
         // vintensity [2]
         cv::Mat src_val = extract_roi_safe( src_planes.at( 2 ), src_rect );
         cv::Mat dst_val = extract_roi_safe( dst_planes.at( 2 ), dst_rect );
-        // src_quad_roi.release();
+        cv::resize( src_val, src_val, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
+
+        // combine them based on weights
+        // TODO give dst edges more weight
+        dst_hue = ( src_hue * w_hue ) + ( dst_hue * (1.0f - w_hue) );
+        dst_sat = ( src_sat * w_sat ) + ( dst_sat * (1.0f - w_sat) );
+        dst_val = ( src_val * w_val ) + ( dst_val * (1.0f - w_val) ); // identity preservation
+
+        src_hue.release();
+        src_sat.release();
+        src_val.release();
 
         // // copy hue and saturation from src to dst
         dst_hue.copyTo( output_planes.at( 0 )( dst_rect ) );
         dst_sat.copyTo( output_planes.at( 1 )( dst_rect ) );
         dst_val.copyTo( output_planes.at( 2 )( dst_rect ) );
+
         // dst_planes[0].setTo( (src_mean_hue.val[0] * 6 + dst_mean_hue.val[0] ) / 7, dst_quad_roi );
         // dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_quad_roi );
         // // average vintensity of both weighing dst
         // dst_planes[2].setTo( (src_mean_val.val[0] + dst_mean_val.val[0] * 3 ) / 4, dst_quad_roi );
-        // dst_quad_roi.release();
-        src_hue.release();
+
         dst_hue.release();
-        src_sat.release();
         dst_sat.release();
-        src_val.release();
         dst_val.release();
     }
 
