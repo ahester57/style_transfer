@@ -165,7 +165,7 @@ process_style_data(StyleTransferData* style_data)
         // dst_planes[1].setTo( src_mean_sat, dst_marker_mask );
         dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_quad_roi );
         // average vintensity of both weighing dst
-        dst_planes[2].setTo( (src_mean_val.val[0] * 3 + dst_mean_val.val[0] ) / 4, dst_quad_roi );
+        dst_planes[2].setTo( (src_mean_val.val[0] + dst_mean_val.val[0] * 3 ) / 4, dst_quad_roi );
         dst_quad_roi.release();
     }
 

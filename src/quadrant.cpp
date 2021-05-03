@@ -60,6 +60,7 @@ quadrant_cut(cv::Rect src_rect)
     int c_h = src_rect.height / 2;
     int c_w = src_rect.width / 2;
 
+    //TODO still, not all data preserved
     std::vector<cv::Rect> quandrants;
     quandrants.push_back( cv::Rect( src_rect.x, src_rect.y                  , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // top_left
     quandrants.push_back( cv::Rect( src_rect.x, (src_rect.y + c_w)          , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // top_right
