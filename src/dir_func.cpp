@@ -22,9 +22,9 @@ open_image(std::string file_path, bool grayscale)
     try {
         // attempt to read the image
         if ( grayscale ) {
-            dst = cv::imread(file_path, cv::IMREAD_GRAYSCALE);
+            dst = cv::imread( file_path, cv::IMREAD_GRAYSCALE );
         } else {
-            dst = cv::imread(file_path);
+            dst = cv::imread( file_path, cv::IMREAD_COLOR );
         }
 
         assert( !dst.empty() );

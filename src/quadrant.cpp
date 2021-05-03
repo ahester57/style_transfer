@@ -66,32 +66,32 @@ quadrant_cut(cv::Rect src_rect)
         cv::Rect( // top_left
             src_rect.x,
             src_rect.y,
-            (c_h + 5) ^ 2,
-            (c_w + 5) ^ 2
+            (c_w + 5) ^ 2,
+            (c_h + 5) ^ 2
         )
     );
     quandrants.push_back(
         cv::Rect( // top_right
             src_rect.x,
-            (src_rect.y + (c_w - 1) ^ 2),
-            (c_h + 5) ^ 2,
-            (c_w + 5) ^ 2
+            (src_rect.y + (c_h - 1) ^ 2),
+            (c_w + 5) ^ 2,
+            (c_h + 5) ^ 2
         )
     );
     quandrants.push_back(
         cv::Rect( // bottom_left
-            (src_rect.x + (c_h - 1) ^ 2),
+            (src_rect.x + (c_w - 1) ^ 2),
             src_rect.y,
-            (c_h + 5) ^ 2,
-            (c_w + 5) ^ 2
+            (c_w + 5) ^ 2,
+            (c_h + 5) ^ 2
         )
     );
     quandrants.push_back(
         cv::Rect( // bottom_right
-            (src_rect.x + (c_h - 1) ^ 2),
-            (src_rect.y + (c_w - 1) ^ 2),
-            (c_h + 5) ^ 2,
-            (c_w + 5) ^ 2
+            (src_rect.x + (c_w - 1) ^ 2),
+            (src_rect.y + (c_h - 1) ^ 2),
+            (c_w + 5) ^ 2,
+            (c_h + 5) ^ 2
         )
     );
     return quandrants;
