@@ -64,10 +64,10 @@ preprocess_style_data(
     bgr_to_hsv( template_image, &template_image );
     bgr_to_hsv( target_image, &target_image );
 
-#if DEBUG > 1
+#if DEBUG
     cv::imshow( WINDOW_NAME + " Template Image", template_image );
     cv::imshow( WINDOW_NAME + " Target Image", target_image );
-    cv::waitKey(0);
+    cv::waitKey(1);
 #endif
 
     std::string output_window_name = WINDOW_NAME + " Output Image";

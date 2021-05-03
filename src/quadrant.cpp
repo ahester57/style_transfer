@@ -53,7 +53,7 @@ swap_quadrants(cv::Mat* src)
     }
 }
 
-// split rect into 4 equal size quadrants
+// split rect into 4 equal-ish size quadrants
 std::vector<cv::Rect>
 quadrant_cut(cv::Rect src_rect)
 {
@@ -62,10 +62,38 @@ quadrant_cut(cv::Rect src_rect)
 
     //TODO still, not all data preserved
     std::vector<cv::Rect> quandrants;
-    quandrants.push_back( cv::Rect( src_rect.x, src_rect.y                  , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // top_left
-    quandrants.push_back( cv::Rect( src_rect.x, (src_rect.y + c_w)          , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // top_right
-    quandrants.push_back( cv::Rect( (src_rect.x + c_h), src_rect.y          , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // bottom_left
-    quandrants.push_back( cv::Rect( (src_rect.x + c_h), (src_rect.y + c_w)  , (c_h + 1) ^ 2, (c_w + 1) ^ 2 ) ); // bottom_right
+    quandrants.push_back(
+        cv::Rect( // top_left
+            src_rect.x,
+            src_rect.y,
+            (c_h + 5) ^ 2,
+            (c_w + 5) ^ 2
+        )
+    );
+    quandrants.push_back(
+        cv::Rect( // top_right
+            src_rect.x,
+            (src_rect.y + (c_w - 1) ^ 2),
+            (c_h + 5) ^ 2,
+            (c_w + 5) ^ 2
+        )
+    );
+    quandrants.push_back(
+        cv::Rect( // bottom_left
+            (src_rect.x + (c_h - 1) ^ 2),
+            src_rect.y,
+            (c_h + 5) ^ 2,
+            (c_w + 5) ^ 2
+        )
+    );
+    quandrants.push_back(
+        cv::Rect( // bottom_right
+            (src_rect.x + (c_h - 1) ^ 2),
+            (src_rect.y + (c_w - 1) ^ 2),
+            (c_h + 5) ^ 2,
+            (c_w + 5) ^ 2
+        )
+    );
     return quandrants;
 }
 
