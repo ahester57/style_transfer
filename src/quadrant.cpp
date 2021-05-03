@@ -12,8 +12,10 @@
 #define DEBUG 0
 
 #if DEBUG
-    #include <opencv2/highgui/highgui.hpp>
     #include <iostream>
+#endif
+#if DEBUG > 1
+    #include <opencv2/highgui/highgui.hpp>
 #endif
 
 
@@ -97,9 +99,16 @@ quadrant_cut(cv::Rect src_rect)
     return quandrants;
 }
 
-// split a rect into 4 quadrants `depth` times
+// split an image into 4 quadrants `depth` times
 std::vector<cv::Rect>
-quadrant_split_recursive(cv::Rect src_rect, int depth)
+quadrant_split_recursive(cv::Mat image, int depth)
+{
+    return quadrant_split_recursive( image, cv::Rect( {}, image.size() ), depth );
+}
+
+// split an image into 4 quadrants `depth` times
+std::vector<cv::Rect>
+quadrant_split_recursive(cv::Mat image, cv::Rect src_rect, int depth)
 {
 #if DEBUG
         std::cout << "depth: " << depth << std::endl;
@@ -107,7 +116,9 @@ quadrant_split_recursive(cv::Rect src_rect, int depth)
     if ( depth == 0 ) {
         // return given rect when depth limit hit
         std::vector<cv::Rect> depth_limit_rect;
-        depth_limit_rect.push_back( src_rect );
+        depth_limit_rect.push_back(
+            extract_roi_rect_safe( image, src_rect )
+        );
 #if DEBUG
         std::cout << "depth limit hit" << std::endl;
         std::cout << src_rect.x << ", " << src_rect.y << ", " << src_rect.height << ", " << src_rect.width << std::endl;
@@ -120,7 +131,7 @@ quadrant_split_recursive(cv::Rect src_rect, int depth)
     std::vector<cv::Rect> recursive_quads;
     // recursively do all quadrants
     for ( cv::Rect& q : quadrants ) {
-        std::vector<cv::Rect> q_quads = quadrant_split_recursive( q, depth - 1 );
+        std::vector<cv::Rect> q_quads = quadrant_split_recursive( image, q, depth - 1 );
         recursive_quads.insert( recursive_quads.end(), q_quads.begin(), q_quads.end() );
     }
 

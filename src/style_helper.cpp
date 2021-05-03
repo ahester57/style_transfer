@@ -16,6 +16,7 @@
 #include "hsv_convert.hpp"
 #include "mouse_callback.hpp"
 #include "quadrant.hpp"
+#include "region_of_interest.hpp"
 
 #define DEBUG 1
 
@@ -87,13 +88,11 @@ preprocess_style_data(
 
     // TEMPLATE
     // split images into equal amount of quadrants.
-    cv::Rect template_rect = cv::Rect( {}, style_data.template_image.size() );
-    style_data.template_quadrants = quadrant_split_recursive( template_rect, quadrant_depth );
+    style_data.template_quadrants = quadrant_split_recursive( style_data.template_image, quadrant_depth );
 
     // TARGET
     // split images into equal amount of quadrants.
-    cv::Rect target_rect = cv::Rect( {}, style_data.target_image.size() );
-    style_data.target_quadrants = quadrant_split_recursive( target_rect, quadrant_depth );
+    style_data.target_quadrants = quadrant_split_recursive( style_data.target_image, quadrant_depth );
 
 #if DEBUG
     std::cout << std::endl << "Template Quadrants:\t" << style_data.template_quadrants.size() << std::endl;
@@ -111,7 +110,7 @@ process_style_data(StyleTransferData* style_data)
     assert( !style_data->template_image.empty() );
     assert( !style_data->target_image.empty() );
     assert( style_data->template_quadrants.size() > 0 );
-    assert( style_data->target_quadrants.size() > 0 );
+    assert( style_data->template_quadrants.size() == style_data->target_quadrants.size() );
 
 #if DEBUG
     std::clock_t clock_begin;

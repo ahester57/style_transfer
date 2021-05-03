@@ -17,7 +17,9 @@ void swap_quadrants(cv::Mat* src);
 // cut quadrants
 std::vector<cv::Rect> quadrant_cut(cv::Rect src_rect);
 
-std::vector<cv::Rect> quadrant_split_recursive(cv::Rect src_rect, int depth = 1);
+std::vector<cv::Rect> quadrant_split_recursive(cv::Mat image, int depth = 2);
+
+std::vector<cv::Rect> quadrant_split_recursive(cv::Mat image, cv::Rect src_rect, int depth = 2);
 
 cv::Mat quadrant_mask_generator(cv::Mat image, cv::Rect quadrant);
 
