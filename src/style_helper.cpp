@@ -126,17 +126,33 @@ process_style_data(StyleTransferData* style_data)
     std::vector<cv::Mat> dst_planes;
     cv::split( style_data->target_image, dst_planes );
 
+    std::vector<cv::Mat> output_planes;
+    cv::split(
+        cv::Mat::zeros(
+            style_data->target_image.size(),
+            style_data->target_image.type()
+        ),
+        output_planes
+    );
+
     // loop thru each superpixel to transfer style (mean)
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
 
-        // find the mask for given superpixel
+        cv::Rect src_rect = style_data->template_quadrants.at( i );
+        cv::Rect dst_rect = style_data->target_quadrants.at( i );
+
+        if ( dst_rect.area() == 0 ) {
+            continue;
+        }
+
+        // find the mask for given quadrant
         cv::Mat src_quad_roi = quadrant_mask_generator(
             style_data->template_image,
-            style_data->template_quadrants.at( i )
+            src_rect
         );
         cv::Mat dst_quad_roi = quadrant_mask_generator(
             style_data->target_image,
-            style_data->target_quadrants.at( i )
+            dst_rect
         );
 
 #if DEBUG > 1
@@ -147,29 +163,42 @@ process_style_data(StyleTransferData* style_data)
     }
 #endif
 
-        // average hue
-        cv::Scalar src_mean_hue = cv::mean( src_planes.at( 0 ), src_quad_roi );
-        cv::Scalar dst_mean_hue = cv::mean( dst_planes.at( 0 ), dst_quad_roi );
-        // avg saturation
-        cv::Scalar src_mean_sat = cv::mean( src_planes.at( 1 ), src_quad_roi );
-        cv::Scalar dst_mean_sat = cv::mean( dst_planes.at( 1 ), dst_quad_roi );
-        // average vintensity
-        cv::Scalar src_mean_val = cv::mean( src_planes.at( 2 ), src_quad_roi );
-        cv::Scalar dst_mean_val = cv::mean( dst_planes.at( 2 ), dst_quad_roi );
+        // hue [0]
+        cv::Mat hue;
+        cv::Mat src_hue = extract_roi_safe( src_planes.at( 0 ), src_rect );
+        cv::Mat dst_hue = extract_roi_safe( dst_planes.at( 0 ), dst_rect );
+        // src_hue.reshape( 1, src_hue.rows * src_hue.cols );
+        // saturation [1]
+        cv::Mat src_sat = extract_roi_safe( src_planes.at( 1 ), src_rect );
+        cv::Mat dst_sat = extract_roi_safe( dst_planes.at( 1 ), dst_rect );
+        // vintensity [2]
+        cv::Mat src_val = extract_roi_safe( src_planes.at( 2 ), src_rect );
+        cv::Mat dst_val = extract_roi_safe( dst_planes.at( 2 ), dst_rect );
         src_quad_roi.release();
 
-        // copy hue and saturation from src to dst
-        // dst_planes[0].setTo( src_mean_hue, dst_marker_mask );
-        dst_planes[0].setTo( (src_mean_hue.val[0] * 6 + dst_mean_hue.val[0] ) / 7, dst_quad_roi );
-        // dst_planes[1].setTo( src_mean_sat, dst_marker_mask );
-        dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_quad_roi );
-        // average vintensity of both weighing dst
-        dst_planes[2].setTo( (src_mean_val.val[0] + dst_mean_val.val[0] * 3 ) / 4, dst_quad_roi );
+        // // copy hue and saturation from src to dst
+        dst_hue.copyTo( output_planes.at( 0 )( dst_rect ) );
+        dst_sat.copyTo( output_planes.at( 1 )( dst_rect ) );
+        dst_val.copyTo( output_planes.at( 2 )( dst_rect ) );
+        // dst_planes[0].setTo( (src_mean_hue.val[0] * 6 + dst_mean_hue.val[0] ) / 7, dst_quad_roi );
+        // dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_quad_roi );
+        // // average vintensity of both weighing dst
+        // dst_planes[2].setTo( (src_mean_val.val[0] + dst_mean_val.val[0] * 3 ) / 4, dst_quad_roi );
         dst_quad_roi.release();
+        src_hue.release();
+        dst_hue.release();
+        src_sat.release();
+        dst_sat.release();
+        src_val.release();
+        dst_val.release();
     }
 
     // release source planes
     for ( cv::Mat &img : src_planes ) {
+        img.release();
+    }
+    // release source planes
+    for ( cv::Mat &img : dst_planes ) {
         img.release();
     }
 
@@ -180,8 +209,8 @@ process_style_data(StyleTransferData* style_data)
 #endif
 
     // merge dst_planes back to hsv image
-    cv::merge( dst_planes, style_data->marked_up_image );
-    for ( cv::Mat &img : dst_planes ) {
+    cv::merge( output_planes, style_data->marked_up_image );
+    for ( cv::Mat &img : output_planes ) {
         img.release();
     }
 
