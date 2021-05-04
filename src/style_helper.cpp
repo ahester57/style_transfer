@@ -4,7 +4,6 @@
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/video/tracking.hpp>
 
 #include <iostream>
 
@@ -17,6 +16,8 @@
 #include "mouse_callback.hpp"
 #include "quadrant.hpp"
 #include "region_of_interest.hpp"
+#include "registration.hpp"
+
 
 #define DEBUG 1
 
@@ -103,78 +104,29 @@ preprocess_style_data(
 }
 
 
-cv::Mat
-register_images(cv::Mat tmplate, cv::Mat target)
-{
-#if DEBUG
-    std::clock_t clock_begin;
-    std::clock_t clock_end;
-    std::printf( "\nBegin Image Registration\n" );
-    clock_begin = std::clock();
-#endif
-
-    int motion_type = cv::MOTION_EUCLIDEAN;
-    float epsilon = 0.0000001;
-
-    cv::Size warp_matrix_size = cv::Size( 3, motion_type != cv::MOTION_HOMOGRAPHY ? 2 : 3 );
-    // create warp matrix
-    cv::Mat warp_matrix = cv::Mat::eye( warp_matrix_size, CV_32F );;
-
-    cv::Mat equalized_tmplate;
-    // convert input image to grayscale
-    cv::cvtColor( tmplate, equalized_tmplate, cv::COLOR_HSV2BGR );
-
-    cv::cvtColor( target, target, cv::COLOR_HSV2BGR );
-    cv::cvtColor( equalized_tmplate, equalized_tmplate, cv::COLOR_BGR2GRAY );
-    cv::cvtColor( target, target, cv::COLOR_BGR2GRAY );
-    // equalize grayscale input image
-    cv::equalizeHist( equalized_tmplate, equalized_tmplate );
-    cv::equalizeHist( target, target );
-
-   double correlation_co
-        = cv::findTransformECC(
-            target,
-            equalized_tmplate,
-            warp_matrix,
-            motion_type,
-            cv::TermCriteria(
-                cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
-                warp_matrix.size().area(),
-                epsilon
-            )
-        );
-
-    // warp original image using transformed warp matrix
-    motion_type != cv::MOTION_HOMOGRAPHY ?
-        cv::warpAffine(      tmplate, tmplate, warp_matrix, tmplate.size() ) :
-        cv::warpPerspective( tmplate, tmplate, warp_matrix, tmplate.size() );
-
-    equalized_tmplate.release();
-    warp_matrix.release();
-
-#if DEBUG
-    clock_end = std::clock();
-    std::printf( "\nRegistration Time Elapsed: %.0f (ms)\n", (float)( clock_end - clock_begin ) / CLOCKS_PER_SEC * 1000 );
-#endif
-
-    return tmplate;
-}
-
-
 void
 process_style_data(StyleTransferData* style_data)
 {
+    // TODO move weights to input
+    float w_hue = 0.8;
+    float w_sat = 0.9;
+    float w_val = 0.15;
+
     assert( style_data != NULL);
     assert( !style_data->template_image.empty() );
     assert( !style_data->target_image.empty() );
     assert( style_data->template_quadrants.size() > 0 );
     assert( style_data->template_quadrants.size() == style_data->target_quadrants.size() );
+    assert( w_hue >= 0 && w_hue <= 1 );
+    assert( w_sat >= 0 && w_sat <= 1 );
+    assert( w_val >= 0 && w_val <= 1 );
 
     // register template to target
-    cv::Mat registered_template = register_images( style_data->template_image, style_data->target_image );
+    cv::Mat m_template = style_data->template_image.clone();//register_images( style_data->template_image, style_data->target_image );
+    cv::Mat m_target = style_data->target_image.clone();
 
 #if DEBUG
-    cv::imshow( "Registered Template", registered_template );
+    cv::imshow( "Registered Template", m_template );
     cv::waitKey( 0 );
     std::clock_t clock_begin;
     std::clock_t clock_end;
@@ -184,11 +136,12 @@ process_style_data(StyleTransferData* style_data)
 
     // split hsv into planes hue[0], saturation[1], vintensity[2]
     std::vector<cv::Mat> src_planes;
-    cv::split( registered_template, src_planes );
-    registered_template.release();
+    cv::split( m_template, src_planes );
+    m_template.release();
 
     std::vector<cv::Mat> dst_planes;
-    cv::split( style_data->target_image, dst_planes );
+    cv::split( m_target, dst_planes );
+    m_target.release();
 
     // initialize 'canvas'
     cv::Mat output_tmp = cv::Mat::zeros( style_data->target_image.size(), style_data->target_image.type() );
@@ -196,10 +149,6 @@ process_style_data(StyleTransferData* style_data)
     cv::split( output_tmp, output_planes );
     output_tmp.release();
 
-    // TODO move weights to input
-    float w_hue = 0.8;
-    float w_sat = 0.9;
-    float w_val = 0.08;
 
     // loop thru each superpixel to transfer style (mean)
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
@@ -242,7 +191,8 @@ process_style_data(StyleTransferData* style_data)
         // TODO give dst edges more weight
         dst_hue = ( src_hue * w_hue ) + ( dst_hue * (1.0f - w_hue) );
         dst_sat = ( src_sat * w_sat ) + ( dst_sat * (1.0f - w_sat) );
-        dst_val = ( src_val * w_val ) + ( dst_val * (1.0f - w_val) ); // identity preservation
+        dst_val = ( src_val * w_val ) + ( dst_val * (1.0f - w_val) ); // identity preservation: have low w_val e.g. 0.05
+        //TODO may need to decrease output color depth in order to capture more accurate colors on output
 
         src_hue.release();
         src_sat.release();

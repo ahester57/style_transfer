@@ -25,7 +25,7 @@ parse_arguments(
         "{@target_image   |      | Target image. Provides structure. Defaults to template image.}"
         // "{grayscale g     |      | Read Input As Grayscale}"
         "{scale sc        |1.f   | Scale input image size using Affine Transform. (0, 10)}"
-        "{quadrant_depth q|2     | Quadrant Depth. How many times to split. [0, 8]}"
+        "{quadrant_depth q|0     | Quadrant Depth. How many times to split. [0, 8]}"
         "{equalize e      |      | Output Image - Equalize}"
         "{blur b          |      | Output Image - Blur}"
         "{sharpen sh      |      | Output Image - Sharpen}"
@@ -55,7 +55,7 @@ parse_arguments(
     try {
         *target_image_filename = (std::string) parser.get<std::string>( 1 ).c_str();
         if ( target_image_filename->size() == 0 ) {
-            *target_image_filename = (std::string) parser.get<std::string>( 0 ).c_str();
+            *target_image_filename = *template_image_filename;
         }
         assert( target_image_filename->size() > 0 );
     } catch (...) {
