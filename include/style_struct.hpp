@@ -23,8 +23,11 @@ typedef struct {
     int quadrant_depth;
     int transfer_mode;
 
-    cv::Mat input_mask;
-    cv::Mat markers;
+    float w_hue;
+    float w_sat;
+    float w_val; // identity preservation: have low w_val e.g. 0.05
+
+    // output image
     cv::Mat marked_up_image;
 
 } StyleTransferData;

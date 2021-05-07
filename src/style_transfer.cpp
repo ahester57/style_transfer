@@ -40,6 +40,9 @@ main(int argc, const char** argv)
     float scale_image_value = 1.f;
     int quadrant_depth = 2;
     int transfer_mode = 0;
+    float w_hue = 0.8;
+    float w_sat = 0.9;
+    float w_val = 0.15;
 
     // CLA flags
     bool blur_output = false;
@@ -61,6 +64,9 @@ main(int argc, const char** argv)
         &scale_image_value,
         &quadrant_depth,
         &transfer_mode,
+        &w_hue,
+        &w_sat,
+        &w_val,
         &blur_output,
         &equalize_output,
         &sharpen_output
@@ -73,7 +79,10 @@ main(int argc, const char** argv)
         target_image_filename,
         scale_image_value,
         quadrant_depth,
-        transfer_mode
+        transfer_mode,
+        w_hue,
+        w_sat,
+        w_val
     );
 
 #if DEBUG
@@ -117,9 +126,7 @@ main(int argc, const char** argv)
 
     style_data.template_image.release();
     style_data.target_image.release();
-    style_data.input_mask.release();
     style_data.marked_up_image.release();
-    style_data.markers.release();
 
     return 0;
 }

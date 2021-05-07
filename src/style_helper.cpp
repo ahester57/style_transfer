@@ -36,7 +36,10 @@ preprocess_style_data(
     std::string target_filename,
     float scale_image_value,
     int quadrant_depth,
-    int transfer_mode
+    int transfer_mode,
+    float w_hue,
+    float w_sat,
+    float w_val
 ) {
     // open images by filename
     cv::Mat template_image = open_image( template_filename );
@@ -88,6 +91,9 @@ preprocess_style_data(
     // SET the algorithm parameters
     style_data.quadrant_depth = quadrant_depth;
     style_data.transfer_mode = transfer_mode;
+    style_data.w_hue = w_hue;
+    style_data.w_sat = w_sat;
+    style_data.w_val = w_val; // identity preservation
 
     // TEMPLATE
     // split images into equal amount of quadrants.
@@ -109,10 +115,9 @@ preprocess_style_data(
 void
 process_style_data(StyleTransferData* style_data)
 {
-    // TODO move weights to input
-    float w_hue = 0.8;
-    float w_sat = 0.9;
-    float w_val = 0.15; // identity preservation: have low w_val e.g. 0.05
+    float w_hue = style_data->w_hue;
+    float w_sat = style_data->w_sat;
+    float w_val = style_data->w_val;
 
     assert( style_data != NULL);
     assert( !style_data->template_image.empty() );
@@ -232,9 +237,9 @@ process_style_data(StyleTransferData* style_data)
 
             // combine them based on weights
             // TODO give dst edges more weight
-            dst_hue = ( src_hue * w_hue ) + ( dst_hue * (1.0f - w_hue) );
-            dst_sat = ( src_sat * w_sat ) + ( dst_sat * (1.0f - w_sat) );
-            dst_val = ( src_val * w_val ) + ( dst_val * (1.0f - w_val) );
+            dst_hue = ( src_hue * (1.0f - w_hue) ) + ( dst_hue * w_hue );
+            dst_sat = ( src_sat * (1.0f - w_sat) ) + ( dst_sat * w_sat );
+            dst_val = ( src_val * (1.0f - w_val) ) + ( dst_val * w_val );
 
             // // copy hue and saturation from src to dst
             dst_hue.copyTo( output_planes.at( 0 )( dst_rect ) );
@@ -256,17 +261,31 @@ process_style_data(StyleTransferData* style_data)
             src_mask = quadrant_mask_generator( src_planes.at( 0 ), src_rect );
             dst_mask = quadrant_mask_generator( dst_planes.at( 0 ), dst_rect );
 
+            // hue [0]
             src_hue_s = cv::mean( src_planes.at( 0 ), src_mask );
             dst_hue_s = cv::mean( dst_planes.at( 0 ), dst_mask );
+
+            // saturation [1]
             src_sat_s = cv::mean( src_planes.at( 1 ), src_mask );
             dst_sat_s = cv::mean( dst_planes.at( 1 ), dst_mask );
+
+            // vintensity [2]
             src_val_s = cv::mean( src_planes.at( 2 ), src_mask );
             dst_val_s = cv::mean( dst_planes.at( 2 ), dst_mask );
 
             // weigh mean hue and saturation against src to dst
-            output_planes.at( 0 ).setTo( (src_hue_s.val[0] * w_hue + dst_hue_s.val[0] * (1.0f - w_hue) ), dst_mask );
-            output_planes.at( 1 ).setTo( (src_sat_s.val[0] * w_sat + dst_sat_s.val[0] * (1.0f - w_sat) ), dst_mask );
-            output_planes.at( 2 ).setTo( (src_val_s.val[0] * w_val + dst_val_s.val[0] * (1.0f - w_val) ), dst_mask );
+            output_planes.at( 0 ).setTo(
+                (src_hue_s.val[0] * (1.0f - w_hue) + dst_hue_s.val[0] * w_hue ),
+                dst_mask
+            );
+            output_planes.at( 1 ).setTo(
+                (src_sat_s.val[0] * (1.0f - w_sat) + dst_sat_s.val[0] * w_sat ),
+                dst_mask
+            );
+            output_planes.at( 2 ).setTo(
+                (src_val_s.val[0] * (1.0f - w_val) + dst_val_s.val[0] * w_val ),
+                dst_mask
+            );
 
             src_mask.release();
             dst_mask.release();
@@ -285,7 +304,7 @@ process_style_data(StyleTransferData* style_data)
     for ( cv::Mat &img : src_planes ) {
         img.release();
     }
-    // release source planes
+    // release dst planes
     for ( cv::Mat &img : dst_planes ) {
         img.release();
     }
@@ -296,9 +315,10 @@ process_style_data(StyleTransferData* style_data)
     clock_begin = std::clock();
 #endif
 
-    // merge dst_planes back to hsv image
+    // merge output_planes back to hsv image
     cv::merge( output_planes, style_data->marked_up_image );
 
+    // release out planes
     for ( cv::Mat &img : output_planes ) {
         img.release();
     }

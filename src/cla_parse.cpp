@@ -21,6 +21,9 @@ parse_arguments(
     float* scale_image_value,
     int* quadrant_depth,
     int* transfer_mode,
+    float* w_hue,
+    float* w_sat,
+    float* w_val,
     bool* blur_output,
     bool* equalize_output,
     bool* sharpen_output
@@ -31,7 +34,10 @@ parse_arguments(
         // "{grayscale g     |      | Read Input As Grayscale}"
         "{scale sc        |1.f   | Scale input image size using Affine Transform. (0, 10)}"
         "{quadrant_depth q|0     | Quadrant Depth. How many times to split. [0, 8]}"
-        "{mode m          |blend | Transfer mode [ blend / mean ]}"
+        "{transfer_mode m |blend | Transfer Mode [ blend / mean ]}"
+        "{w_hue wh        |0.2f  | Hue Weight (of template)}"
+        "{w_sat ws        |0.1f  | Saturation Weight (of template)}"
+        "{w_val wv        |0.85f | Value Weight (of template)}"
         "{equalize e      |      | Output Image - Equalize}"
         "{blur b          |      | Output Image - Blur}"
         "{sharpen sh      |      | Output Image - Sharpen}"
@@ -96,6 +102,30 @@ parse_arguments(
         *transfer_mode = transfer_mode_str_map[transfer_mode_str];
     } catch (...) {
         std::cerr << "Failed to parse transfer_mode argument!:" << std::endl;
+        return -1;
+    }
+
+    try {
+        *w_hue = (float) parser.get<float>( "wh" );
+        assert( *w_hue >= 0.f && *w_hue <= 1.f );
+    } catch (...) {
+        std::cerr << "Failed to parse w_hue argument!:" << std::endl;
+        return -1;
+    }
+
+    try {
+        *w_sat = (float) parser.get<float>( "ws" );
+        assert( *w_sat >= 0.f && *w_sat <= 1.f );
+    } catch (...) {
+        std::cerr << "Failed to parse w_sat argument!:" << std::endl;
+        return -1;
+    }
+
+    try {
+        *w_val = (float) parser.get<float>( "wv" );
+        assert( *w_val >= 0.f && *w_val <= 1.f );
+    } catch (...) {
+        std::cerr << "Failed to parse w_val argument!:" << std::endl;
         return -1;
     }
 

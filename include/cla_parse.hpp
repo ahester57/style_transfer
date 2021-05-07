@@ -15,6 +15,9 @@ int parse_arguments(
     float* scale_image_value,
     int* quadrant_depth,
     int* transfer_mode,
+    float* w_hue,
+    float* w_sat,
+    float* w_val,
     bool* blur_output,
     bool* equalize_output,
     bool* sharpen_output

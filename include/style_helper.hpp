@@ -18,7 +18,10 @@ StyleTransferData preprocess_style_data(
     std::string target_filename,
     float scale_image_value,
     int quadrant_depth = 1,
-    int transfer_mode = blend
+    int transfer_mode = blend,
+    float w_hue = 0.2,
+    float w_sat = 0.1,
+    float w_val = 0.85
 );
 
 void process_style_data(StyleTransferData* style_data);
