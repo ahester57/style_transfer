@@ -39,6 +39,7 @@ main(int argc, const char** argv)
     std::string target_image_filename;
     float scale_image_value = 1.f;
     int quadrant_depth = 2;
+    int transfer_mode = 0;
 
     // CLA flags
     bool blur_output = false;
@@ -59,6 +60,7 @@ main(int argc, const char** argv)
         &target_image_filename,
         &scale_image_value,
         &quadrant_depth,
+        &transfer_mode,
         &blur_output,
         &equalize_output,
         &sharpen_output
@@ -70,7 +72,8 @@ main(int argc, const char** argv)
         template_image_filename,
         target_image_filename,
         scale_image_value,
-        quadrant_depth
+        quadrant_depth,
+        transfer_mode
     );
 
 #if DEBUG
@@ -80,8 +83,10 @@ main(int argc, const char** argv)
     // begin clocking process
 #endif
 
-    // actually transfer style
-    process_style_data( &style_data );
+    // 'actually' transfer style
+    process_style_data(
+        &style_data
+    );
 
 #if DEBUG
     clock_end = std::clock();

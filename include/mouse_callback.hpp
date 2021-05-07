@@ -6,7 +6,7 @@
 #ifndef MOUSE_CALLBACK_H
 #define MOUSE_CALLBACK_H
 
-#include "./style_helper.hpp"
+#include "style_struct.hpp"
 
 
 void mouse_callback_draw_zeros(int event, int x, int y, int d, void* userdata);

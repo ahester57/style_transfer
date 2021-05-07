@@ -4,7 +4,11 @@
 
 #include <opencv2/core/core.hpp>
 
+#include <map>
+
 #include "cla_parse.hpp"
+
+#include "style_enum.hpp"
 
 
 // parse command line arguments
@@ -16,6 +20,7 @@ parse_arguments(
     std::string* target_image_filename,
     float* scale_image_value,
     int* quadrant_depth,
+    int* transfer_mode,
     bool* blur_output,
     bool* equalize_output,
     bool* sharpen_output
@@ -26,6 +31,7 @@ parse_arguments(
         // "{grayscale g     |      | Read Input As Grayscale}"
         "{scale sc        |1.f   | Scale input image size using Affine Transform. (0, 10)}"
         "{quadrant_depth q|0     | Quadrant Depth. How many times to split. [0, 8]}"
+        "{mode m          |blend | Transfer mode [ blend / mean ]}"
         "{equalize e      |      | Output Image - Equalize}"
         "{blur b          |      | Output Image - Blur}"
         "{sharpen sh      |      | Output Image - Sharpen}"
@@ -75,7 +81,21 @@ parse_arguments(
         *quadrant_depth = parser.get<int>( "q" );
         assert( *quadrant_depth >= 0 && *quadrant_depth <= 8 );
     } catch (...) {
-        std::cerr << "Failed to parse region_size argument!:" << std::endl;
+        std::cerr << "Failed to parse quadrant_depth argument!:" << std::endl;
+        return -1;
+    }
+
+    try {
+        std::string transfer_mode_str = (std::string) parser.get<std::string>( "m" ).c_str();
+        assert( transfer_mode_str.size() > 0 );
+
+        std::map<std::string, int> transfer_mode_str_map = {
+            { "blend",  blend  },
+            { "mean", mean }
+        };
+        *transfer_mode = transfer_mode_str_map[transfer_mode_str];
+    } catch (...) {
+        std::cerr << "Failed to parse transfer_mode argument!:" << std::endl;
         return -1;
     }
 

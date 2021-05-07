@@ -9,7 +9,7 @@
 #include "mouse_callback.hpp"
 
 #include "dir_func.hpp"
-#include "style_helper.hpp"
+#include "style_struct.hpp"
 
 #define DEBUG 1
 

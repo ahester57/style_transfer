@@ -14,6 +14,7 @@ int parse_arguments(
     std::string* target_image_filename,
     float* scale_image_value,
     int* quadrant_depth,
+    int* transfer_mode,
     bool* blur_output,
     bool* equalize_output,
     bool* sharpen_output

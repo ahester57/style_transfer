@@ -9,31 +9,16 @@
 
 #include <vector>
 
-
-typedef struct {
-    std::string window_name;
-    // input images
-    cv::Mat template_image;
-    cv::Mat target_image;
-
-    // image quadrants, same size
-    std::vector<cv::Rect> template_quadrants;
-    std::vector<cv::Rect> target_quadrants;
-    // quadrant depth, or how many times to recursively split into 4
-    int quadrant_depth;
-
-    cv::Mat input_mask;
-    cv::Mat markers;
-    cv::Mat marked_up_image;
-
-} StyleTransferData;
+#include "style_enum.hpp"
+#include "style_struct.hpp"
 
 
 StyleTransferData preprocess_style_data(
     std::string template_filename,
     std::string target_filename,
     float scale_image_value,
-    int quadrant_depth = 1
+    int quadrant_depth = 1,
+    int transfer_mode = blend
 );
 
 void process_style_data(StyleTransferData* style_data);

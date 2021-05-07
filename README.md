@@ -25,7 +25,9 @@ Usage: style_transfer.exe [params] template_image target_image
                 Output Image - Equalize
         -h, --help (value:true)
                 Show Help Message
-        -q, --quadrant_depth (value:2)
+        -m, --mode (value:blend)
+                Transfer mode [ blend / mean ]
+        -q, --quadrant_depth (value:0)
                 Quadrant Depth. How many times to split. [0, 8]
         --sc, --scale (value:1.f)
                 Scale input image size using Affine Transform. (0, 10)

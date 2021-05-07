@@ -35,7 +35,8 @@ preprocess_style_data(
     std::string template_filename,
     std::string target_filename,
     float scale_image_value,
-    int quadrant_depth
+    int quadrant_depth,
+    int transfer_mode
 ) {
     // open images by filename
     cv::Mat template_image = open_image( template_filename );
@@ -86,6 +87,7 @@ preprocess_style_data(
 
     // SET the algorithm parameters
     style_data.quadrant_depth = quadrant_depth;
+    style_data.transfer_mode = transfer_mode;
 
     // TEMPLATE
     // split images into equal amount of quadrants.
@@ -110,7 +112,7 @@ process_style_data(StyleTransferData* style_data)
     // TODO move weights to input
     float w_hue = 0.8;
     float w_sat = 0.9;
-    float w_val = 0.15;
+    float w_val = 0.15; // identity preservation: have low w_val e.g. 0.05
 
     assert( style_data != NULL);
     assert( !style_data->template_image.empty() );
@@ -122,7 +124,7 @@ process_style_data(StyleTransferData* style_data)
     assert( w_val >= 0 && w_val <= 1 );
 
     // register template to target
-    cv::Mat m_template = style_data->template_image.clone();//register_images( style_data->template_image, style_data->target_image );
+    cv::Mat m_template = register_images( style_data->template_image, style_data->target_image );
     cv::Mat m_target = style_data->target_image.clone();
 
 #if DEBUG
@@ -132,6 +134,11 @@ process_style_data(StyleTransferData* style_data)
     std::clock_t clock_end;
     std::printf( "\nBegin Style Transfer\n" );
     clock_begin = std::clock();
+#endif
+
+
+#if DEBUG
+    std::printf( "\nBegin splitting planes\n" );
 #endif
 
     // split hsv into planes hue[0], saturation[1], vintensity[2]
@@ -149,6 +156,22 @@ process_style_data(StyleTransferData* style_data)
     cv::split( output_tmp, output_planes );
     output_tmp.release();
 
+#if DEBUG
+    std::printf( "\nBegin transfer loop\n" );
+
+    // CLA `--mode=[Blend|mean]`
+    switch ( style_data->transfer_mode ) {
+    // mode = blend
+    case blend:
+        std::printf( "\nMode: \"blend\"\n" );
+        break;
+    case mean:
+        std::printf( "\nMode: \"mean\"\n" );
+        break;
+    default:
+        std::printf( "\nMode: \"none\"\n" );
+    }
+#endif
 
     // loop thru each superpixel to transfer style (mean)
     for ( int i = 0; i < std::pow( 4, style_data->quadrant_depth ); i++ ) {
@@ -156,10 +179,7 @@ process_style_data(StyleTransferData* style_data)
         cv::Rect src_rect = style_data->template_quadrants.at( i );
         cv::Rect dst_rect = style_data->target_quadrants.at( i );
 
-        if ( src_rect.area() == 0 ) {
-            continue;
-        }
-        if ( dst_rect.area() == 0 ) {
+        if ( src_rect.area() == 0 || dst_rect.area() == 0 ) {
             continue;
         }
 
@@ -171,46 +191,94 @@ process_style_data(StyleTransferData* style_data)
     }
 #endif
 
-        // we resize each quadrant, as not to warp the template image out of affine warp_matrix
-        // hue [0]
-        cv::Mat src_hue = extract_roi_safe( src_planes.at( 0 ), src_rect );
-        cv::Mat dst_hue = extract_roi_safe( dst_planes.at( 0 ), dst_rect );
-        cv::resize( src_hue, src_hue, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
+        // for blend mode
+        cv::Mat src_hue;
+        cv::Mat src_sat;
+        cv::Mat src_val;
+        cv::Mat dst_hue;
+        cv::Mat dst_sat;
+        cv::Mat dst_val;
 
-        // saturation [1]
-        cv::Mat src_sat = extract_roi_safe( src_planes.at( 1 ), src_rect );
-        cv::Mat dst_sat = extract_roi_safe( dst_planes.at( 1 ), dst_rect );
-        cv::resize( src_sat, src_sat, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
+        // for mean mode
+        cv::Mat src_mask;
+        cv::Mat dst_mask;
+        cv::Scalar src_hue_s;
+        cv::Scalar dst_hue_s;
+        cv::Scalar src_sat_s;
+        cv::Scalar dst_sat_s;
+        cv::Scalar src_val_s;
+        cv::Scalar dst_val_s;
 
-        // vintensity [2]
-        cv::Mat src_val = extract_roi_safe( src_planes.at( 2 ), src_rect );
-        cv::Mat dst_val = extract_roi_safe( dst_planes.at( 2 ), dst_rect );
-        cv::resize( src_val, src_val, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
+        // CLA `--mode=[Blend|mean]`
+        switch ( style_data->transfer_mode ) {
+        // mode = blend
+        case blend:
 
-        // combine them based on weights
-        // TODO give dst edges more weight
-        dst_hue = ( src_hue * w_hue ) + ( dst_hue * (1.0f - w_hue) );
-        dst_sat = ( src_sat * w_sat ) + ( dst_sat * (1.0f - w_sat) );
-        dst_val = ( src_val * w_val ) + ( dst_val * (1.0f - w_val) ); // identity preservation: have low w_val e.g. 0.05
-        //TODO may need to decrease output color depth in order to capture more accurate colors on output
+            // we resize each quadrant, as not to warp the template image out of affine warp_matrix
+            // hue [0]
+            src_hue = extract_roi_safe( src_planes.at( 0 ), src_rect );
+            dst_hue = extract_roi_safe( dst_planes.at( 0 ), dst_rect );
+            cv::resize( src_hue, src_hue, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
 
-        src_hue.release();
-        src_sat.release();
-        src_val.release();
+            // saturation [1]
+            src_sat = extract_roi_safe( src_planes.at( 1 ), src_rect );
+            dst_sat = extract_roi_safe( dst_planes.at( 1 ), dst_rect );
+            cv::resize( src_sat, src_sat, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
 
-        // // copy hue and saturation from src to dst
-        dst_hue.copyTo( output_planes.at( 0 )( dst_rect ) );
-        dst_sat.copyTo( output_planes.at( 1 )( dst_rect ) );
-        dst_val.copyTo( output_planes.at( 2 )( dst_rect ) );
+            // vintensity [2]
+            src_val = extract_roi_safe( src_planes.at( 2 ), src_rect );
+            dst_val = extract_roi_safe( dst_planes.at( 2 ), dst_rect );
+            cv::resize( src_val, src_val, dst_rect.size(), 0, 0, cv::INTER_LINEAR );
 
-        // dst_planes[0].setTo( (src_mean_hue.val[0] * 6 + dst_mean_hue.val[0] ) / 7, dst_quad_roi );
-        // dst_planes[1].setTo( (src_mean_sat.val[0] * 3 + dst_mean_sat.val[0] ) / 4, dst_quad_roi );
-        // // average vintensity of both weighing dst
-        // dst_planes[2].setTo( (src_mean_val.val[0] + dst_mean_val.val[0] * 3 ) / 4, dst_quad_roi );
+            // combine them based on weights
+            // TODO give dst edges more weight
+            dst_hue = ( src_hue * w_hue ) + ( dst_hue * (1.0f - w_hue) );
+            dst_sat = ( src_sat * w_sat ) + ( dst_sat * (1.0f - w_sat) );
+            dst_val = ( src_val * w_val ) + ( dst_val * (1.0f - w_val) );
 
-        dst_hue.release();
-        dst_sat.release();
-        dst_val.release();
+            // // copy hue and saturation from src to dst
+            dst_hue.copyTo( output_planes.at( 0 )( dst_rect ) );
+            dst_sat.copyTo( output_planes.at( 1 )( dst_rect ) );
+            dst_val.copyTo( output_planes.at( 2 )( dst_rect ) );
+
+            src_hue.release();
+            src_sat.release();
+            src_val.release();
+
+            dst_hue.release();
+            dst_sat.release();
+            dst_val.release();
+
+            break;
+        // mode = mean
+        case 1:
+            // much slower
+            src_mask = quadrant_mask_generator( src_planes.at( 0 ), src_rect );
+            dst_mask = quadrant_mask_generator( dst_planes.at( 0 ), dst_rect );
+
+            src_hue_s = cv::mean( src_planes.at( 0 ), src_mask );
+            dst_hue_s = cv::mean( dst_planes.at( 0 ), dst_mask );
+            src_sat_s = cv::mean( src_planes.at( 1 ), src_mask );
+            dst_sat_s = cv::mean( dst_planes.at( 1 ), dst_mask );
+            src_val_s = cv::mean( src_planes.at( 2 ), src_mask );
+            dst_val_s = cv::mean( dst_planes.at( 2 ), dst_mask );
+
+            // weigh mean hue and saturation against src to dst
+            output_planes.at( 0 ).setTo( (src_hue_s.val[0] * w_hue + dst_hue_s.val[0] * (1.0f - w_hue) ), dst_mask );
+            output_planes.at( 1 ).setTo( (src_sat_s.val[0] * w_sat + dst_sat_s.val[0] * (1.0f - w_sat) ), dst_mask );
+            output_planes.at( 2 ).setTo( (src_val_s.val[0] * w_val + dst_val_s.val[0] * (1.0f - w_val) ), dst_mask );
+
+            src_mask.release();
+            dst_mask.release();
+
+            break;
+        // i guess do nothing
+        default:
+            output_planes.at( 0 ).setTo( dst_planes.at( 0 ) );
+            output_planes.at( 1 ).setTo( dst_planes.at( 1 ) );
+            output_planes.at( 2 ).setTo( dst_planes.at( 2 ) );
+        }
+
     }
 
     // release source planes
@@ -230,6 +298,7 @@ process_style_data(StyleTransferData* style_data)
 
     // merge dst_planes back to hsv image
     cv::merge( output_planes, style_data->marked_up_image );
+
     for ( cv::Mat &img : output_planes ) {
         img.release();
     }
