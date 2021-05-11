@@ -6,15 +6,12 @@
 ----
 ## Purpose
 
+Computer-assisted artistic style transfer gives animators a tool to produce rotoscope-like videos with relative ease. Automatic artistic style transfer can transform a simple home movie into something straight out of the artist's imagination, and they must only provide one example style frame, provided the subject does not change dramatically. Artistic style transfer softwares allow ideas to flow more freely in a short-film medium by providing the tools to apply an artistic style and background to the entire frame sequence, given only a single example frame [6 Fišer]. Attractive constraints of the style transfer can range from a total makeover of the entire frame to simply an addition of mustaches to every person in the picture. The focus of style transfer shifts to facial animations, such as the "filters" seen on many popular social media apps. The use of technology for fun became more commonplace in 2020, and tools to help people utilize their imagination are increasingly valuable.
 
 ----
 
-## Task
 
-
-----
-
-#### Usage
+## Usage
 
 ```
 Usage: style_transfer.exe [params] template_image target_image
@@ -47,5 +44,14 @@ Usage: style_transfer.exe [params] template_image target_image
 
 ```
 ----
+
+## Mean Mode Results
+
+[Mean Mode](doc/MEAN_RESULTS.md)
+
+## Blend Mode Results
+
+[Blend Mode](doc/BLEND_RESULTS.md)
+
 
 https://github.com/ahester57/style_transfer

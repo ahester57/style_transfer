@@ -1,6 +1,6 @@
 # Quadrant Mean Results
 
-i5-3570k @ 4.1 GHz
+`i5-3570k @ 4.1 GHz`
 
 ## Input Images
 
@@ -14,7 +14,7 @@ i5-3570k @ 4.1 GHz
 
 ## Three Quadrants
 
-![Three Quandrants](../out_release/tiger_kid/tiger_kid_q_3.png)  
+![Three Quandrants](../out_release/tiger_kid/mean/tiger_kid_q_3.png)  
 
 ```
 $ ./style_transfer.exe images/tiger.jpg images/kid.jpg -m=mean -q=3
@@ -59,7 +59,7 @@ Post-Process Time Elapsed: 131 (ms)
 
 ## Five Quadrants
 
-![Five Quandrants](../out_release/tiger_kid/tiger_kid_q_5.png)  
+![Five Quandrants](../out_release/tiger_kid/mean/tiger_kid_q_5.png)  
 
 ```
 $ ./style_transfer.exe images/tiger.jpg images/kid.jpg -m=mean -q=5
@@ -104,7 +104,7 @@ Post-Process Time Elapsed: 142 (ms)
 
 ## Seven Quadrants
 
-![Seven Quandrants](../out_release/tiger_kid/tiger_kid_q_7.png)  
+![Seven Quandrants](../out_release/tiger_kid/mean/tiger_kid_q_7.png)  
 
 ```
 $ ./style_transfer.exe images/tiger.jpg images/kid.jpg -m=mean -q=7
@@ -149,7 +149,7 @@ Post-Process Time Elapsed: 128 (ms)
 
 ## Eight Quadrants
 
-![Eight Quandrants](../out_release/tiger_kid/tiger_kid_q_8.png)  
+![Eight Quandrants](../out_release/tiger_kid/mean/tiger_kid_q_8.png)  
 
 ```
 $ ./style_transfer.exe images/tiger.jpg images/kid.jpg -m=mean -q=8
